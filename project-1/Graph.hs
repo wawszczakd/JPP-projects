@@ -28,25 +28,28 @@ instance Graph Relation where
     connect r1 r2 = Relation (Set.union (domain r1) (domain r2)) (Set.union (Set.union (relation r1) (relation r2)) (allPairs (domain r1) (domain r2)))
 
 instance (Ord a, Num a) => Num (Relation a) where
-    (+) = undefined
-    (-) = undefined
-    (*) = undefined
-    negate = undefined
-    abs = undefined
-    signum = undefined
-    fromInteger = undefined
+    fromInteger = vertex . fromInteger
+    (+)         = union
+    (*)         = connect
+    signum      = const empty
+    abs         = id
+    negate      = id
 
--- instance Graph Basic where
+instance Graph Basic where
+    empty         = Empty
+    vertex x      = Vertex x
+    union g1 g2   = Union g1 g2
+    connect g1 g2 = Connect g1 g2
 
 -- instance Ord a => Eq (Basic a) where
 
--- instance (Ord a, Num a) => Num (Basic a) where
---     fromInteger = vertex . fromInteger
---     (+)         = union
---     (*)         = connect
---     signum      = const empty
---     abs         = id
---     negate      = id
+instance (Ord a, Num a) => Num (Basic a) where
+    fromInteger = vertex . fromInteger
+    (+)         = union
+    (*)         = connect
+    signum      = const empty
+    abs         = id
+    negate      = id
 
 -- instance Semigroup (Basic a) where
 --   (<>) = union
