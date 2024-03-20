@@ -13,12 +13,12 @@ empty = Empty
 null :: Set a -> Bool
 null Empty         = True
 null (Singleton x) = False
-null (Union s1 s2) = (null s1) && (null s2)
+null (Union s1 s2) = null s1 && null s2
 
 member :: Eq a => a -> Set a -> Bool
 member y Empty         = False
 member y (Singleton x) = x == y
-member y (Union s1 s2) = (member y s1) || (member y s2)
+member y (Union s1 s2) = member y s1 || member y s2
 
 singleton :: a -> Set a
 singleton x = Singleton x
@@ -49,7 +49,7 @@ toAscList s =
           | h' == prev = helper h' t' acc
           | otherwise  = helper h' t' (h' : acc)
       in
-        reverse (helper h t [h])
+        reverse $ helper h t [h]
     
     mergeSort :: Ord a => [a] -> [a]
     mergeSort []  = []
@@ -96,7 +96,7 @@ instance Monoid (Set a) where
 instance Show a => Show (Set a) where
     show Empty         = "_"
     show (Singleton x) = show x
-    show (Union s1 s2)   = "(" ++ (show s1) ++ ", " ++ (show s2) ++ ")"
+    show (Union s1 s2)   = "(" ++ show s1 ++ ", " ++ show s2 ++ ")"
 
 instance Functor Set where
     fmap f Empty         = Empty

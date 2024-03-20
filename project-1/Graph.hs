@@ -15,17 +15,33 @@ data Basic a = Empty
              | Union (Basic a) (Basic a)
              | Connect (Basic a) (Basic a)
 
-allPairs :: Set a -> Set a -> Set (a, a)
-allPairs v1 v2 = Set.fromList [(x1, x2) | x1 <- Set.toList v1, x2 <- Set.toList v2]
-
-allPairsUnique :: Ord a => Set a -> Set a -> Set (a, a)
-allPairsUnique v1 v2 = Set.fromList [(x1, x2) | x1 <- Set.toAscList v1, x2 <- Set.toAscList v2]
+cartesianProduct :: [a] -> [a] -> [(a, a)]
+cartesianProduct l1 l2 = [(x1, x2) | x1 <- l1, x2 <- l2]
 
 instance Graph Relation where
-    empty         = Relation Set.empty Set.empty
-    vertex x      = Relation (Set.singleton x) Set.empty
-    union r1 r2   = Relation (Set.union (domain r1) (domain r2)) (Set.union (relation r1) (relation r2))
-    connect r1 r2 = Relation (Set.union (domain r1) (domain r2)) (Set.union (Set.union (relation r1) (relation r2)) (allPairs (domain r1) (domain r2)))
+    empty :: Relation a
+    empty = Relation Set.empty Set.empty
+
+    vertex :: a -> Relation a
+    vertex x = Relation (Set.singleton x) Set.empty
+
+    union :: Relation a -> Relation a -> Relation a
+    union r1 r2 =
+      let
+        vertices = Set.union (domain r1)   (domain r2)
+        edges    = Set.union (relation r1) (relation r2)
+      in
+        Relation vertices edges
+    
+    connect :: Relation a -> Relation a -> Relation a
+    connect r1 r2 =
+      let
+        vertices = Set.union (domain r1) (domain r2)
+        oldEdges = Set.union (relation r1) (relation r2)
+        newEdges = Set.fromList (cartesianProduct (Set.toList $ domain r1) (Set.toList $ domain r2))
+        edges    = Set.union oldEdges newEdges
+      in
+        Relation vertices edges
 
 instance (Ord a, Num a) => Num (Relation a) where
     fromInteger = vertex . fromInteger
@@ -41,7 +57,13 @@ instance Graph Basic where
     union g1 g2   = Union g1 g2
     connect g1 g2 = Connect g1 g2
 
--- instance Ord a => Eq (Basic a) where
+instance Ord a => Eq (Basic a) where
+    g1 == g2 =
+      let
+        graph1 = fromBasic g1
+        graph2 = fromBasic g2
+      in
+        domain graph1 == domain graph2 && relation graph1 == relation graph2
 
 instance (Ord a, Num a) => Num (Basic a) where
     fromInteger = vertex . fromInteger
@@ -51,34 +73,61 @@ instance (Ord a, Num a) => Num (Basic a) where
     abs         = id
     negate      = id
 
--- instance Semigroup (Basic a) where
---   (<>) = union
+instance Semigroup (Basic a) where
+  (<>) = union
 
--- instance Monoid (Basic a) where
---   mempty = Empty
+instance Monoid (Basic a) where
+  mempty = Empty
 
--- fromBasic :: Graph g => Basic a -> g a
+fromBasic :: Graph g => Basic a -> g a
+fromBasic Empty           = empty
+fromBasic (Vertex x)      = vertex x
+fromBasic (Union g1 g2)   = union (fromBasic g1) (fromBasic g2)
+fromBasic (Connect g1 g2) = connect (fromBasic g1) (fromBasic g2)
 
--- instance (Ord a, Show a) => Show (Basic a) where
+instance (Ord a, Show a) => Show (Basic a) where
+    show g =
+      let
+        graph = fromBasic g
+        vertices = Set.toAscList $ domain graph
+        edges = Set.toAscList $ relation graph
+      in
+        "vertices: " ++ show vertices ++ "; edges: " ++ show edges
 
--- -- | Example graph
--- -- >>> example34
--- -- edges [(1,2),(2,3),(2,4),(3,5),(4,5)] + vertices [17]
+-- | Example graph
+-- >>> example34
+-- edges [(1,2),(2,3),(2,4),(3,5),(4,5)] + vertices [17]
 
--- example34 :: Basic Int
--- example34 = 1*2 + 2*(3+4) + (3+4)*5 + 17
+example34 :: Basic Int
+example34 = 1*2 + 2*(3+4) + (3+4)*5 + 17
 
--- todot :: (Ord a, Show a) => Basic a -> String
--- todot = undefined
+todot :: (Ord a, Show a) => Basic a -> String
+todot g =
+  let
+    graph = fromBasic g
+    vertices = Set.toAscList $ domain graph
+    edges = Set.toAscList $ relation graph
+  in
+    "digraph {\n" ++
+    concat [show x1 ++ " -> " ++ show x2 | (x1, x2) <- edges] ++
+    concat [show x ++ ";\n" | x <- vertices] ++
+    "}\n"
 
--- instance Functor Basic where
+instance Functor Basic where
+    fmap f Empty           = Empty
+    fmap f (Vertex x)      = Vertex $ f x
+    fmap f (Union g1 g2)   = Union (fmap f g1) (fmap f g2)
+    fmap f (Connect g1 g2) = Connect (fmap f g1) (fmap f g2)
 
--- -- | Merge vertices
--- -- >>> mergeV 3 4 34 example34
--- -- edges [(1,2),(2,34),(34,5)] + vertices [17]
+-- | Merge vertices
+-- >>> mergeV 3 4 34 example34
+-- edges [(1,2),(2,34),(34,5)] + vertices [17]
 
--- mergeV :: Eq a => a -> a -> a -> Basic a -> Basic a
--- mergeV = undefined
+mergeV :: Eq a => a -> a -> a -> Basic a -> Basic a
+mergeV x1 x2 y Empty           = Empty
+mergeV x1 x2 y (Vertex x)      = if x1 == x || x2 == x then Vertex y else Vertex x
+mergeV x1 x2 y (Union g1 g2)   = Union (mergeV x1 x2 y g1) (mergeV x1 x2 y g2)
+mergeV x1 x2 y (Connect g1 g2) = Connect (mergeV x1 x2 y g1) (mergeV x1 x2 y g2)
 
 -- instance Applicative Basic where
 
