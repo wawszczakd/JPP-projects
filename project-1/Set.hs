@@ -82,7 +82,7 @@ union :: Set a -> Set a -> Set a
 union s1 s2 = Union s1 s2
 
 insert :: a -> Set a -> Set a
-insert x s = Union (Singleton x) s
+insert x s = Union s (Singleton x)
 
 instance Ord a => Eq (Set a) where
     s1 == s2 = toAscList s1 == toAscList s2
@@ -94,9 +94,7 @@ instance Monoid (Set a) where
     mempty  = Empty
 
 instance Show a => Show (Set a) where
-    show Empty         = "_"
-    show (Singleton x) = show x
-    show (Union s1 s2)   = "(" ++ show s1 ++ ", " ++ show s2 ++ ")"
+    show s = show $ toList s
 
 instance Functor Set where
     fmap f Empty         = Empty

@@ -45,8 +45,22 @@ instance Graph Relation where
 
 instance (Ord a, Num a) => Num (Relation a) where
   fromInteger = vertex . fromInteger
-  (+)         = union
-  (*)         = connect
+  g1 + g2     =
+    let
+      v1 = Set.fromList $ Set.toAscList $ domain g1
+      e1 = Set.fromList $ Set.toAscList $ relation g1
+      v2 = Set.fromList $ Set.toAscList $ domain g2
+      e2 = Set.fromList $ Set.toAscList $ relation g2
+    in
+      union (Relation v1 e1) (Relation v2 e2)
+  g1 * g2     =
+    let
+      v1 = Set.fromList $ Set.toAscList $ domain g1
+      e1 = Set.fromList $ Set.toAscList $ relation g1
+      v2 = Set.fromList $ Set.toAscList $ domain g2
+      e2 = Set.fromList $ Set.toAscList $ relation g2
+    in
+      connect (Relation v1 e1) (Relation v2 e2)
   signum      = const empty
   abs         = id
   negate      = id
@@ -67,8 +81,22 @@ instance Ord a => Eq (Basic a) where
 
 instance (Ord a, Num a) => Num (Basic a) where
   fromInteger = vertex . fromInteger
-  (+)         = union
-  (*)         = connect
+  g1 + g2     =
+    let
+      v1 = Set.fromList $ Set.toAscList $ domain g1
+      e1 = Set.fromList $ Set.toAscList $ relation g1
+      v2 = Set.fromList $ Set.toAscList $ domain g2
+      e2 = Set.fromList $ Set.toAscList $ relation g2
+    in
+      union (Relation v1 e1) (Relation v2 e2)
+  g1 * g2     =
+    let
+      v1 = Set.fromList $ Set.toAscList $ domain g1
+      e1 = Set.fromList $ Set.toAscList $ relation g1
+      v2 = Set.fromList $ Set.toAscList $ domain g2
+      e2 = Set.fromList $ Set.toAscList $ relation g2
+    in
+      connect (Relation v1 e1) (Relation v2 e2)
   signum      = const empty
   abs         = id
   negate      = id
@@ -85,12 +113,29 @@ fromBasic (Vertex x)      = vertex x
 fromBasic (Union g1 g2)   = union (fromBasic g1) (fromBasic g2)
 fromBasic (Connect g1 g2) = connect (fromBasic g1) (fromBasic g2)
 
+getVertices :: (Ord a) => Basic a -> [a]
+getVertices g =
+  let
+    graph = fromBasic g
+    vertices = Set.toAscList $ domain graph
+    edges = Set.toAscList $ relation graph
+    used = Set.toAscList $ Set.fromList $ [x1 | (x1, x2) <- edges] ++ [x2 | (x1, x2) <- edges]
+    
+    go :: Ord a => [a] -> [a] -> [a] -> [a]
+    go []        used'     acc = acc
+    go (h1 : t1) []        acc = go t1 [] (h1 : acc)
+    go (h1 : t1) (h2 : t2) acc
+      | h1 == h2  = go t1        t2        acc
+      | h1 < h2   = go (h1 : t1) t2        acc
+      | otherwise = go t1        (h2 : t2) (h1 : acc)
+  in
+    go (reverse vertices) (reverse used) []
+
 instance (Ord a, Show a) => Show (Basic a) where
   show g =
     let
-      graph = fromBasic g
-      vertices = Set.toAscList $ domain graph
-      edges = Set.toAscList $ relation graph
+      vertices = getVertices g
+      edges = Set.toAscList $ relation $ fromBasic g
     in
       "edges " ++ show edges ++ " + vertices " ++ show vertices
 
@@ -104,10 +149,8 @@ example34 = 1*2 + 2*(3+4) + (3+4)*5 + 17
 todot :: (Ord a, Show a) => Basic a -> String
 todot g =
   let
-    graph = fromBasic g
-    vertices = Set.toAscList $ domain graph
-    edges = Set.toAscList $ relation graph
-    used = Set.toAscList $ Set.fromList $ [x1 | (x1, x2) <- edges] ++ [x2 | (x1, x2) <- edges]
+    vertices = getVertices g
+    edges = Set.toAscList $ relation $ fromBasic g
     
     addStrings :: String -> String -> String
     addStrings s t = foldr (\c -> \acc -> c : acc) t s
@@ -119,15 +162,11 @@ todot g =
     edgesString []             acc = acc
     edgesString ((x1, x2) : t) acc = edgesString t $ addManyStrings [show x1, " -> ", show x2, ";\n"] acc
     
-    verticesString :: (Ord a, Show a) => [a] -> [a] -> String -> String
-    verticesString []        used      acc = acc
-    verticesString (h1 : t1) []        acc = verticesString t1 [] $ addManyStrings [show h1, ";\n"] acc
-    verticesString (h1 : t1) (h2 : t2) acc
-      | h1 == h2  = verticesString t1        t2        acc
-      | h1 < h2   = verticesString (h1 : t1) t2        acc
-      | otherwise = verticesString t1        (h2 : t2) $ addManyStrings [show h1, ";\n"] acc
+    verticesString :: (Ord a, Show a) => [a] -> String -> String
+    verticesString []      acc = acc
+    verticesString (h : t) acc = verticesString t $ addManyStrings [show h, ";\n"] acc
   in
-    addManyStrings ["digraph {\n", edgesString (reverse edges) "", verticesString (reverse vertices) (reverse used) "", "}"] ""
+    addManyStrings ["digraph {\n", edgesString (reverse edges) "", verticesString (reverse vertices) "", "}"] ""
 
 instance Functor Basic where
   fmap f Empty           = Empty
