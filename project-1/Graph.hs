@@ -8,7 +8,7 @@ class Graph g where
   connect :: g a -> g a -> g a
 
 data Relation a = Relation { domain :: Set a, relation :: Set (a, a) }
-    deriving (Eq, Show)
+  deriving (Eq, Show)
 
 data Basic a = Empty
              | Vertex a
@@ -19,59 +19,59 @@ cartesianProduct :: [a] -> [a] -> [(a, a)]
 cartesianProduct l1 l2 = [(x1, x2) | x1 <- l1, x2 <- l2]
 
 instance Graph Relation where
-    empty :: Relation a
-    empty = Relation Set.empty Set.empty
-
-    vertex :: a -> Relation a
-    vertex x = Relation (Set.singleton x) Set.empty
-
-    union :: Relation a -> Relation a -> Relation a
-    union r1 r2 =
-      let
-        vertices = Set.union (domain r1)   (domain r2)
-        edges    = Set.union (relation r1) (relation r2)
-      in
-        Relation vertices edges
-    
-    connect :: Relation a -> Relation a -> Relation a
-    connect r1 r2 =
-      let
-        vertices = Set.union (domain r1) (domain r2)
-        oldEdges = Set.union (relation r1) (relation r2)
-        newEdges = Set.fromList (cartesianProduct (Set.toList $ domain r1) (Set.toList $ domain r2))
-        edges    = Set.union oldEdges newEdges
-      in
-        Relation vertices edges
+  empty :: Relation a
+  empty = Relation Set.empty Set.empty
+  
+  vertex :: a -> Relation a
+  vertex x = Relation (Set.singleton x) Set.empty
+  
+  union :: Relation a -> Relation a -> Relation a
+  union r1 r2 =
+    let
+      vertices = Set.union (domain r1)   (domain r2)
+      edges    = Set.union (relation r1) (relation r2)
+    in
+      Relation vertices edges
+  
+  connect :: Relation a -> Relation a -> Relation a
+  connect r1 r2 =
+    let
+      vertices = Set.union (domain r1) (domain r2)
+      oldEdges = Set.union (relation r1) (relation r2)
+      newEdges = Set.fromList (cartesianProduct (Set.toList $ domain r1) (Set.toList $ domain r2))
+      edges    = Set.union oldEdges newEdges
+    in
+      Relation vertices edges
 
 instance (Ord a, Num a) => Num (Relation a) where
-    fromInteger = vertex . fromInteger
-    (+)         = union
-    (*)         = connect
-    signum      = const empty
-    abs         = id
-    negate      = id
+  fromInteger = vertex . fromInteger
+  (+)         = union
+  (*)         = connect
+  signum      = const empty
+  abs         = id
+  negate      = id
 
 instance Graph Basic where
-    empty         = Empty
-    vertex x      = Vertex x
-    union g1 g2   = Union g1 g2
-    connect g1 g2 = Connect g1 g2
+  empty         = Empty
+  vertex x      = Vertex x
+  union g1 g2   = Union g1 g2
+  connect g1 g2 = Connect g1 g2
 
 instance Ord a => Eq (Basic a) where
-    g1 == g2 =
-      let
-        graph1 = fromBasic g1
-        graph2 = fromBasic g2
-      in
-        domain graph1 == domain graph2 && relation graph1 == relation graph2
+  g1 == g2 =
+    let
+      graph1 = fromBasic g1
+      graph2 = fromBasic g2
+    in
+      domain graph1 == domain graph2 && relation graph1 == relation graph2
 
 instance (Ord a, Num a) => Num (Basic a) where
-    fromInteger = vertex . fromInteger
-    (+)         = union
-    (*)         = connect
-    signum      = const empty
-    abs         = id
-    negate      = id
+  fromInteger = vertex . fromInteger
+  (+)         = union
+  (*)         = connect
+  signum      = const empty
+  abs         = id
+  negate      = id
 
 instance Semigroup (Basic a) where
   (<>) = union
@@ -86,13 +86,13 @@ fromBasic (Union g1 g2)   = union (fromBasic g1) (fromBasic g2)
 fromBasic (Connect g1 g2) = connect (fromBasic g1) (fromBasic g2)
 
 instance (Ord a, Show a) => Show (Basic a) where
-    show g =
-      let
-        graph = fromBasic g
-        vertices = Set.toAscList $ domain graph
-        edges = Set.toAscList $ relation graph
-      in
-        "vertices: " ++ show vertices ++ "; edges: " ++ show edges
+  show g =
+    let
+      graph = fromBasic g
+      vertices = Set.toAscList $ domain graph
+      edges = Set.toAscList $ relation graph
+    in
+      "edges " ++ show edges ++ " + vertices " ++ show vertices
 
 -- | Example graph
 -- >>> example34
@@ -107,36 +107,60 @@ todot g =
     graph = fromBasic g
     vertices = Set.toAscList $ domain graph
     edges = Set.toAscList $ relation graph
+    used = Set.toAscList $ Set.fromList $ [x1 | (x1, x2) <- edges] ++ [x2 | (x1, x2) <- edges]
+    
+    addStrings :: String -> String -> String
+    addStrings s t = foldr (\c -> \acc -> c : acc) t s
+    
+    addManyStrings :: [String] -> String -> String
+    addManyStrings l t = foldr (\s -> \acc -> addStrings s acc) t l
+    
+    edgesString :: (Ord a, Show a) => [(a, a)] -> String -> String
+    edgesString []             acc = acc
+    edgesString ((x1, x2) : t) acc = edgesString t $ addManyStrings [show x1, " -> ", show x2, ";\n"] acc
+    
+    verticesString :: (Ord a, Show a) => [a] -> [a] -> String -> String
+    verticesString []        used      acc = acc
+    verticesString (h1 : t1) []        acc = verticesString t1 [] $ addManyStrings [show h1, ";\n"] acc
+    verticesString (h1 : t1) (h2 : t2) acc
+      | h1 == h2  = verticesString t1        t2        acc
+      | h1 < h2   = verticesString (h1 : t1) t2        acc
+      | otherwise = verticesString t1        (h2 : t2) $ addManyStrings [show h1, ";\n"] acc
   in
-    "digraph {\n" ++
-    concat [show x1 ++ " -> " ++ show x2 | (x1, x2) <- edges] ++
-    concat [show x ++ ";\n" | x <- vertices] ++
-    "}\n"
+    addManyStrings ["digraph {\n", edgesString (reverse edges) "", verticesString (reverse vertices) (reverse used) "", "}"] ""
 
 instance Functor Basic where
-    fmap f Empty           = Empty
-    fmap f (Vertex x)      = Vertex $ f x
-    fmap f (Union g1 g2)   = Union (fmap f g1) (fmap f g2)
-    fmap f (Connect g1 g2) = Connect (fmap f g1) (fmap f g2)
+  fmap f Empty           = Empty
+  fmap f (Vertex x)      = Vertex $ f x
+  fmap f (Union g1 g2)   = Union (fmap f g1) (fmap f g2)
+  fmap f (Connect g1 g2) = Connect (fmap f g1) (fmap f g2)
 
 -- | Merge vertices
 -- >>> mergeV 3 4 34 example34
 -- edges [(1,2),(2,34),(34,5)] + vertices [17]
 
 mergeV :: Eq a => a -> a -> a -> Basic a -> Basic a
-mergeV x1 x2 y Empty           = Empty
-mergeV x1 x2 y (Vertex x)      = if x1 == x || x2 == x then Vertex y else Vertex x
-mergeV x1 x2 y (Union g1 g2)   = Union (mergeV x1 x2 y g1) (mergeV x1 x2 y g2)
-mergeV x1 x2 y (Connect g1 g2) = Connect (mergeV x1 x2 y g1) (mergeV x1 x2 y g2)
+mergeV a b c Empty           = Empty
+mergeV a b c (Vertex x)      = if a == x || b == x then Vertex c else Vertex x
+mergeV a b c (Union g1 g2)   = Union (mergeV a b c g1) (mergeV a b c g2)
+mergeV a b c (Connect g1 g2) = Connect (mergeV a b c g1) (mergeV a b c g2)
 
--- instance Applicative Basic where
+instance Applicative Basic where
+  Empty         <*> f = Empty
+  Vertex x      <*> f = fmap x f
+  Connect g1 g2 <*> f = connect (g1 <*> f) (g2 <*> f)
+  Union g1 g2   <*> f = union (g1 <*> f) (g2 <*> f)
+  pure                = Vertex
 
--- instance Monad Basic where
+instance Monad Basic where
+  Empty         >>= f = Empty
+  Vertex x      >>= f = f x
+  Union g1 g2   >>= f = union (g1 >>= f) (g2 >>= f)
+  Connect g1 g2 >>= f = connect (g1 >>= f) (g2 >>= f)
 
--- -- | Split Vertex
--- -- >>> splitV 34 3 4 (mergeV 3 4 34 example34)
--- -- edges [(1,2),(2,3),(2,4),(3,5),(4,5)] + vertices [17]
+-- | Split Vertex
+-- >>> splitV 34 3 4 (mergeV 3 4 34 example34)
+-- edges [(1,2),(2,3),(2,4),(3,5),(4,5)] + vertices [17]
 
--- splitV :: Eq a => a -> a -> a -> Basic a -> Basic a
--- splitV = undefined
-
+splitV :: Eq a => a -> a -> a -> Basic a -> Basic a
+splitV a b c g = g >>= (\x -> if x == a then Union (Vertex b) (Vertex c) else return x)
