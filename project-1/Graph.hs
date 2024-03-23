@@ -81,22 +81,8 @@ instance Ord a => Eq (Basic a) where
 
 instance (Ord a, Num a) => Num (Basic a) where
   fromInteger = vertex . fromInteger
-  g1 + g2     =
-    let
-      v1 = Set.fromList $ Set.toAscList $ domain g1
-      e1 = Set.fromList $ Set.toAscList $ relation g1
-      v2 = Set.fromList $ Set.toAscList $ domain g2
-      e2 = Set.fromList $ Set.toAscList $ relation g2
-    in
-      union (Relation v1 e1) (Relation v2 e2)
-  g1 * g2     =
-    let
-      v1 = Set.fromList $ Set.toAscList $ domain g1
-      e1 = Set.fromList $ Set.toAscList $ relation g1
-      v2 = Set.fromList $ Set.toAscList $ domain g2
-      e2 = Set.fromList $ Set.toAscList $ relation g2
-    in
-      connect (Relation v1 e1) (Relation v2 e2)
+  (+)         = union
+  (*)         = connect
   signum      = const empty
   abs         = id
   negate      = id
