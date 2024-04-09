@@ -1,0 +1,11 @@
+int twice(int x) {
+    x = x * 2;
+    return x;
+}
+
+int main() {
+    int x = 5;
+    print(twice(x)); // 10
+
+    return 0;
+}

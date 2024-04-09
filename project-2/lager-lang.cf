@@ -6,9 +6,15 @@ Prog.      Program ::= [TopDef] ;
 
 FnDef.	   TopDef ::= Type Ident "(" [Arg] ")" Block ;
 
+VarDef.    TopDef ::= Type Ident ";" ;
+
+VarDefAss. TopDef ::= Type Ident "=" Expr ";" ;
+
 separator nonempty TopDef "" ;
 
-Ar. 	   Arg ::= Type Ident;
+ValArg.	   Arg ::= Type Ident ;
+
+RefArg.    Arg ::= Type "&" Ident ;
 
 separator  Arg "," ;
 
@@ -22,13 +28,7 @@ Empty.     Stmt ::= ";" ;
 
 BStmt.     Stmt ::= Block ;
 
-Decl.      Stmt ::= Type [Item] ";" ;
-
-NoInit.    Item ::= Ident ; 
-
-Init.      Item ::= Ident "=" Expr ;
-
-separator nonempty Item "," ;
+DStmt.     Stmt ::= TopDef ; 
 
 Ass.       Stmt ::= Ident "=" Expr  ";" ;
 
@@ -42,7 +42,13 @@ CondElse.  Stmt ::= "if" "(" Expr ")" Block "else" Block ;
 
 While.     Stmt ::= "while" "(" Expr ")" Block ;
 
-SExp.      Stmt ::= Expr  ";" ;
+SExp.      Stmt ::= Expr ";" ;
+
+Break.     Stmt ::= "break" ;
+
+Continue.  Stmt ::= "continue" ;
+
+Print.     Stmt ::= "print" "(" Expr ")" ;
 
 -- Types ---------------------------------------------------
 
@@ -50,7 +56,7 @@ Int.       Type ::= "int" ;
 
 Str.       Type ::= "string" ;
 
-Bool.      Type ::= "boolean" ;
+Bool.      Type ::= "bool" ;
 
 Void.      Type ::= "void" ;
 
@@ -115,8 +121,6 @@ EQU.       RelOp ::= "==" ;
 NE.        RelOp ::= "!=" ;
 
 -- comments ------------------------------------------------
-
-comment    "#" ;
 
 comment    "//" ;
 

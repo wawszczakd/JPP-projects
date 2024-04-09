@@ -1,0 +1,11 @@
+void twice(int &x) {
+    x = x * 2;
+}
+
+int main() {
+    int x = 5;
+    twice(x);
+    print(x); // 10
+
+    return 0;
+}
