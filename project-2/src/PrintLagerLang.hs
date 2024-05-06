@@ -185,9 +185,9 @@ instance Print (AbsLagerLang.Stmt' a) where
     AbsLagerLang.CondElse _ expr block1 block2 -> prPrec i 0 (concatD [doc (showString "if"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 block1, doc (showString "else"), prt 0 block2])
     AbsLagerLang.While _ expr block -> prPrec i 0 (concatD [doc (showString "while"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 block])
     AbsLagerLang.SExp _ expr -> prPrec i 0 (concatD [prt 0 expr, doc (showString ";")])
-    AbsLagerLang.Break _ -> prPrec i 0 (concatD [doc (showString "break")])
-    AbsLagerLang.Continue _ -> prPrec i 0 (concatD [doc (showString "continue")])
-    AbsLagerLang.Print _ expr -> prPrec i 0 (concatD [doc (showString "print"), doc (showString "("), prt 0 expr, doc (showString ")")])
+    AbsLagerLang.Break _ -> prPrec i 0 (concatD [doc (showString "break"), doc (showString ";")])
+    AbsLagerLang.Continue _ -> prPrec i 0 (concatD [doc (showString "continue"), doc (showString ";")])
+    AbsLagerLang.Print _ expr -> prPrec i 0 (concatD [doc (showString "print"), doc (showString "("), prt 0 expr, doc (showString ")"), doc (showString ";")])
 
 instance Print (AbsLagerLang.Type' a) where
   prt i = \case

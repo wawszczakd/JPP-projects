@@ -44,11 +44,11 @@ While.     Stmt ::= "while" "(" Expr ")" Block ;
 
 SExp.      Stmt ::= Expr ";" ;
 
-Break.     Stmt ::= "break" ;
+Break.     Stmt ::= "break" ";" ;
 
-Continue.  Stmt ::= "continue" ;
+Continue.  Stmt ::= "continue" ";" ;
 
-Print.     Stmt ::= "print" "(" Expr ")" ;
+Print.     Stmt ::= "print" "(" Expr ")" ";" ;
 
 -- Types ---------------------------------------------------
 

@@ -38,9 +38,9 @@ Grammar
 	Stmt -> 'if' '(' Expr ')' Block 'else' Block       (25)
 	Stmt -> 'while' '(' Expr ')' Block                 (26)
 	Stmt -> Expr ';'                                   (27)
-	Stmt -> 'break'                                    (28)
-	Stmt -> 'continue'                                 (29)
-	Stmt -> 'print' '(' Expr ')'                       (30)
+	Stmt -> 'break' ';'                                (28)
+	Stmt -> 'continue' ';'                             (29)
+	Stmt -> 'print' '(' Expr ')' ';'                   (30)
 	Type -> 'int'                                      (31)
 	Type -> 'string'                                   (32)
 	Type -> 'bool'                                     (33)
@@ -1352,7 +1352,7 @@ State 73
 	';'            reduce using rule 38
 	'<'            reduce using rule 38
 	'<='           reduce using rule 38
-	'='            shift, and enter state 97
+	'='            shift, and enter state 99
 	'=='           reduce using rule 38
 	'>'            reduce using rule 38
 	'>='           reduce using rule 38
@@ -1417,7 +1417,7 @@ State 76
 
 	Block -> '{' ListStmt . '}'                         (rule 15)
 
-	'}'            shift, and enter state 96
+	'}'            shift, and enter state 98
 
 
 State 77
@@ -1451,7 +1451,7 @@ State 77
 	String         goto state 18
 	TopDef         goto state 74
 	Block          goto state 75
-	ListStmt       goto state 95
+	ListStmt       goto state 97
 	Stmt           goto state 77
 	Type           goto state 6
 	Expr6          goto state 19
@@ -1466,7 +1466,7 @@ State 78
 
 	Stmt -> Expr . ';'                                  (rule 27)
 
-	';'            shift, and enter state 94
+	';'            shift, and enter state 96
 
 
 State 79
@@ -1498,56 +1498,16 @@ State 79
 
 State 80
 
-	Stmt -> 'break' .                                   (rule 28)
+	Stmt -> 'break' . ';'                               (rule 28)
 
-	'!'            reduce using rule 28
-	'('            reduce using rule 28
-	'-'            reduce using rule 28
-	';'            reduce using rule 28
-	'bool'         reduce using rule 28
-	'break'        reduce using rule 28
-	'continue'     reduce using rule 28
-	'false'        reduce using rule 28
-	'if'           reduce using rule 28
-	'int'          reduce using rule 28
-	'print'        reduce using rule 28
-	'return'       reduce using rule 28
-	'string'       reduce using rule 28
-	'true'         reduce using rule 28
-	'void'         reduce using rule 28
-	'while'        reduce using rule 28
-	'{'            reduce using rule 28
-	'}'            reduce using rule 28
-	L_Ident        reduce using rule 28
-	L_integ        reduce using rule 28
-	L_quoted       reduce using rule 28
+	';'            shift, and enter state 95
 
 
 State 81
 
-	Stmt -> 'continue' .                                (rule 29)
+	Stmt -> 'continue' . ';'                            (rule 29)
 
-	'!'            reduce using rule 29
-	'('            reduce using rule 29
-	'-'            reduce using rule 29
-	';'            reduce using rule 29
-	'bool'         reduce using rule 29
-	'break'        reduce using rule 29
-	'continue'     reduce using rule 29
-	'false'        reduce using rule 29
-	'if'           reduce using rule 29
-	'int'          reduce using rule 29
-	'print'        reduce using rule 29
-	'return'       reduce using rule 29
-	'string'       reduce using rule 29
-	'true'         reduce using rule 29
-	'void'         reduce using rule 29
-	'while'        reduce using rule 29
-	'{'            reduce using rule 29
-	'}'            reduce using rule 29
-	L_Ident        reduce using rule 29
-	L_integ        reduce using rule 29
-	L_quoted       reduce using rule 29
+	';'            shift, and enter state 94
 
 
 State 82
@@ -1560,7 +1520,7 @@ State 82
 
 State 83
 
-	Stmt -> 'print' . '(' Expr ')'                      (rule 30)
+	Stmt -> 'print' . '(' Expr ')' ';'                  (rule 30)
 
 	'('            shift, and enter state 92
 
@@ -1675,13 +1635,13 @@ State 89
 	Expr3          goto state 22
 	Expr2          goto state 23
 	Expr1          goto state 24
-	Expr           goto state 102
+	Expr           goto state 104
 
 State 90
 
 	Stmt -> 'return' Expr . ';'                         (rule 22)
 
-	';'            shift, and enter state 101
+	';'            shift, and enter state 103
 
 
 State 91
@@ -1713,7 +1673,7 @@ State 91
 
 State 92
 
-	Stmt -> 'print' '(' . Expr ')'                      (rule 30)
+	Stmt -> 'print' '(' . Expr ')' ';'                  (rule 30)
 
 	'!'            shift, and enter state 26
 	'('            shift, and enter state 27
@@ -1733,7 +1693,7 @@ State 92
 	Expr3          goto state 22
 	Expr2          goto state 23
 	Expr1          goto state 24
-	Expr           goto state 100
+	Expr           goto state 102
 
 State 93
 
@@ -1758,9 +1718,63 @@ State 93
 	Expr3          goto state 22
 	Expr2          goto state 23
 	Expr1          goto state 24
-	Expr           goto state 99
+	Expr           goto state 101
 
 State 94
+
+	Stmt -> 'continue' ';' .                            (rule 29)
+
+	'!'            reduce using rule 29
+	'('            reduce using rule 29
+	'-'            reduce using rule 29
+	';'            reduce using rule 29
+	'bool'         reduce using rule 29
+	'break'        reduce using rule 29
+	'continue'     reduce using rule 29
+	'false'        reduce using rule 29
+	'if'           reduce using rule 29
+	'int'          reduce using rule 29
+	'print'        reduce using rule 29
+	'return'       reduce using rule 29
+	'string'       reduce using rule 29
+	'true'         reduce using rule 29
+	'void'         reduce using rule 29
+	'while'        reduce using rule 29
+	'{'            reduce using rule 29
+	'}'            reduce using rule 29
+	L_Ident        reduce using rule 29
+	L_integ        reduce using rule 29
+	L_quoted       reduce using rule 29
+
+
+State 95
+
+	Stmt -> 'break' ';' .                               (rule 28)
+
+	'!'            reduce using rule 28
+	'('            reduce using rule 28
+	'-'            reduce using rule 28
+	';'            reduce using rule 28
+	'bool'         reduce using rule 28
+	'break'        reduce using rule 28
+	'continue'     reduce using rule 28
+	'false'        reduce using rule 28
+	'if'           reduce using rule 28
+	'int'          reduce using rule 28
+	'print'        reduce using rule 28
+	'return'       reduce using rule 28
+	'string'       reduce using rule 28
+	'true'         reduce using rule 28
+	'void'         reduce using rule 28
+	'while'        reduce using rule 28
+	'{'            reduce using rule 28
+	'}'            reduce using rule 28
+	L_Ident        reduce using rule 28
+	L_integ        reduce using rule 28
+	L_quoted       reduce using rule 28
+
+
+State 96
 
 	Stmt -> Expr ';' .                                  (rule 27)
 
@@ -1787,14 +1801,14 @@ State 94
 	L_quoted       reduce using rule 27
 
 
-State 95
+State 97
 
 	ListStmt -> Stmt ListStmt .                         (rule 17)
 
 	'}'            reduce using rule 17
 
 
-State 96
+State 98
 
 	Block -> '{' ListStmt '}' .                         (rule 15)
 
@@ -1823,7 +1837,7 @@ State 96
 	%eof           reduce using rule 15
 
 
-State 97
+State 99
 
 	Stmt -> Ident '=' . Expr ';'                        (rule 21)
 
@@ -1845,31 +1859,31 @@ State 97
 	Expr3          goto state 22
 	Expr2          goto state 23
 	Expr1          goto state 24
-	Expr           goto state 98
+	Expr           goto state 100
 
-State 98
+State 100
 
 	Stmt -> Ident '=' Expr . ';'                        (rule 21)
 
-	';'            shift, and enter state 106
+	';'            shift, and enter state 108
 
 
-State 99
+State 101
 
 	Stmt -> 'if' '(' Expr . ')' Block                   (rule 24)
 	Stmt -> 'if' '(' Expr . ')' Block 'else' Block      (rule 25)
 
-	')'            shift, and enter state 105
+	')'            shift, and enter state 107
 
 
-State 100
+State 102
 
-	Stmt -> 'print' '(' Expr . ')'                      (rule 30)
+	Stmt -> 'print' '(' Expr . ')' ';'                  (rule 30)
 
-	')'            shift, and enter state 104
+	')'            shift, and enter state 106
 
 
-State 101
+State 103
 
 	Stmt -> 'return' Expr ';' .                         (rule 22)
 
@@ -1896,58 +1910,38 @@ State 101
 	L_quoted       reduce using rule 22
 
 
-State 102
+State 104
 
 	Stmt -> 'while' '(' Expr . ')' Block                (rule 26)
 
-	')'            shift, and enter state 103
+	')'            shift, and enter state 105
 
 
-State 103
+State 105
 
 	Stmt -> 'while' '(' Expr ')' . Block                (rule 26)
 
 	'{'            shift, and enter state 71
 
-	Block          goto state 108
+	Block          goto state 111
 
-State 104
+State 106
 
-	Stmt -> 'print' '(' Expr ')' .                      (rule 30)
+	Stmt -> 'print' '(' Expr ')' . ';'                  (rule 30)
 
-	'!'            reduce using rule 30
-	'('            reduce using rule 30
-	'-'            reduce using rule 30
-	';'            reduce using rule 30
-	'bool'         reduce using rule 30
-	'break'        reduce using rule 30
-	'continue'     reduce using rule 30
-	'false'        reduce using rule 30
-	'if'           reduce using rule 30
-	'int'          reduce using rule 30
-	'print'        reduce using rule 30
-	'return'       reduce using rule 30
-	'string'       reduce using rule 30
-	'true'         reduce using rule 30
-	'void'         reduce using rule 30
-	'while'        reduce using rule 30
-	'{'            reduce using rule 30
-	'}'            reduce using rule 30
-	L_Ident        reduce using rule 30
-	L_integ        reduce using rule 30
-	L_quoted       reduce using rule 30
+	';'            shift, and enter state 110
 
 
-State 105
+State 107
 
 	Stmt -> 'if' '(' Expr ')' . Block                   (rule 24)
 	Stmt -> 'if' '(' Expr ')' . Block 'else' Block      (rule 25)
 
 	'{'            shift, and enter state 71
 
-	Block          goto state 107
+	Block          goto state 109
 
-State 106
+State 108
 
 	Stmt -> Ident '=' Expr ';' .                        (rule 21)
 
@@ -1974,7 +1968,7 @@ State 106
 	L_quoted       reduce using rule 21
 
 
-State 107
+State 109
 
 	Stmt -> 'if' '(' Expr ')' Block .                   (rule 24)
 	Stmt -> 'if' '(' Expr ')' Block . 'else' Block      (rule 25)
@@ -1986,7 +1980,7 @@ State 107
 	'bool'         reduce using rule 24
 	'break'        reduce using rule 24
 	'continue'     reduce using rule 24
-	'else'         shift, and enter state 109
+	'else'         shift, and enter state 112
 	'false'        reduce using rule 24
 	'if'           reduce using rule 24
 	'int'          reduce using rule 24
@@ -2003,7 +1997,34 @@ State 107
 	L_quoted       reduce using rule 24
 
 
-State 108
+State 110
+
+	Stmt -> 'print' '(' Expr ')' ';' .                  (rule 30)
+
+	'!'            reduce using rule 30
+	'('            reduce using rule 30
+	'-'            reduce using rule 30
+	';'            reduce using rule 30
+	'bool'         reduce using rule 30
+	'break'        reduce using rule 30
+	'continue'     reduce using rule 30
+	'false'        reduce using rule 30
+	'if'           reduce using rule 30
+	'int'          reduce using rule 30
+	'print'        reduce using rule 30
+	'return'       reduce using rule 30
+	'string'       reduce using rule 30
+	'true'         reduce using rule 30
+	'void'         reduce using rule 30
+	'while'        reduce using rule 30
+	'{'            reduce using rule 30
+	'}'            reduce using rule 30
+	L_Ident        reduce using rule 30
+	L_integ        reduce using rule 30
+	L_quoted       reduce using rule 30
+
+
+State 111
 
 	Stmt -> 'while' '(' Expr ')' Block .                (rule 26)
 
@@ -2030,15 +2051,15 @@ State 108
 	L_quoted       reduce using rule 26
 
 
-State 109
+State 112
 
 	Stmt -> 'if' '(' Expr ')' Block 'else' . Block      (rule 25)
 
 	'{'            shift, and enter state 71
 
-	Block          goto state 110
+	Block          goto state 113
 
-State 110
+State 113
 
 	Stmt -> 'if' '(' Expr ')' Block 'else' Block .      (rule 25)
 
@@ -2071,4 +2092,4 @@ Grammar Totals
 Number of rules: 72
 Number of terminals: 38
 Number of non-terminals: 25
-Number of states: 111
+Number of states: 114

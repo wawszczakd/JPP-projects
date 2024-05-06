@@ -120,9 +120,9 @@ Stmt
   | 'if' '(' Expr ')' Block 'else' Block { (uncurry AbsLagerLang.BNFC'Position (tokenLineCol $1), AbsLagerLang.CondElse (uncurry AbsLagerLang.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $5) (snd $7)) }
   | 'while' '(' Expr ')' Block { (uncurry AbsLagerLang.BNFC'Position (tokenLineCol $1), AbsLagerLang.While (uncurry AbsLagerLang.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $5)) }
   | Expr ';' { (fst $1, AbsLagerLang.SExp (fst $1) (snd $1)) }
-  | 'break' { (uncurry AbsLagerLang.BNFC'Position (tokenLineCol $1), AbsLagerLang.Break (uncurry AbsLagerLang.BNFC'Position (tokenLineCol $1))) }
-  | 'continue' { (uncurry AbsLagerLang.BNFC'Position (tokenLineCol $1), AbsLagerLang.Continue (uncurry AbsLagerLang.BNFC'Position (tokenLineCol $1))) }
-  | 'print' '(' Expr ')' { (uncurry AbsLagerLang.BNFC'Position (tokenLineCol $1), AbsLagerLang.Print (uncurry AbsLagerLang.BNFC'Position (tokenLineCol $1)) (snd $3)) }
+  | 'break' ';' { (uncurry AbsLagerLang.BNFC'Position (tokenLineCol $1), AbsLagerLang.Break (uncurry AbsLagerLang.BNFC'Position (tokenLineCol $1))) }
+  | 'continue' ';' { (uncurry AbsLagerLang.BNFC'Position (tokenLineCol $1), AbsLagerLang.Continue (uncurry AbsLagerLang.BNFC'Position (tokenLineCol $1))) }
+  | 'print' '(' Expr ')' ';' { (uncurry AbsLagerLang.BNFC'Position (tokenLineCol $1), AbsLagerLang.Print (uncurry AbsLagerLang.BNFC'Position (tokenLineCol $1)) (snd $3)) }
 
 Type :: { (AbsLagerLang.BNFC'Position, AbsLagerLang.Type) }
 Type
