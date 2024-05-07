@@ -8,56 +8,83 @@ module TypeChecker where
     import Data.Map as Map
     import Text.ParserCombinators.ReadP (get)
     
-    type Env = Map.Map Ident Type
+    showPosition :: Maybe (Int, Int) -> String
+    showPosition Nothing = "position unknown"
+    showPosition (Just (row, col)) = "row: " ++ (show row) ++ ", column: " ++ (show col)
     
-    type TypeCheckerMonad = ReaderT Env (ExceptT String IO)
-    
-    data MyType = MyInt | MyStr | MyBool | MyVoid deriving Eq
+    data MyType = MyInt | MyStr | MyBool | MyVoid | MyFun MyType [MyType] deriving (Eq, Show)
     toMyType :: Type -> MyType
     toMyType (Int _) = MyInt
     toMyType (Str _) = MyStr
     toMyType (Bool _) = MyBool
     toMyType (Void _) = MyVoid
-    toMyType (Fun _ typ _) = toMyType typ
+    toMyType (Fun _ typ args) = MyFun (toMyType typ) (Prelude.map toMyType args)
+    toMyTypeArg :: Arg -> MyType
+    toMyTypeArg (ValArg _ typ _) = toMyType typ
+    toMyTypeArg (RefArg _ typ _) = toMyType typ
+    
+    type Env = Map.Map Ident MyType
+    
+    type TypeCheckerMonad = ReaderT Env (ExceptT String IO)
     
     typeCheck :: Program -> TypeCheckerMonad ()
-    typeCheck (Prog pos xs) =
-        go Map.empty xs
+    typeCheck (Prog _ xs) =
+        go xs
         where
-            go :: Env -> [TopDef] -> TypeCheckerMonad ()
-            go _ [] = return ()
-            go env (x:xs) = do
-                env' <- check x env
-                go env' xs
+            go :: [TopDef] -> TypeCheckerMonad ()
+            go [] = return ()
+            go (x:xs) = do
+                env <- checkTopDef x
+                local (const env) (go xs)
     
-    check :: TopDef -> Env -> TypeCheckerMonad Env
-    check (FnDef _ typ name args block) env = return env
-    check (VarDef _ typ name) env = return env
-    check (VarDefAss _ typ name expr) env = do
+    checkTopDef :: TopDef -> TypeCheckerMonad Env
+    checkTopDef (FnDef _ typ name args block) = do
+        env <- ask
+        let typ' = toMyType typ
+            args' = Prelude.map toMyTypeArg args
+        return $ Map.insert name (MyFun typ' args') env
+    
+    checkTopDef (VarDef _ typ name) = do
+        env <- ask
+        return $ Map.insert name (toMyType typ) env
+    
+    checkTopDef (VarDefAss _ typ name expr) = do
+        env <- ask
         let typ' = toMyType typ
         exprType <- getExprType expr
         if typ' == exprType then
-            return $ Map.insert name typ env
+            return $ Map.insert name typ' env
         else
             throwError "Wrong type"
     
     getExprType :: Expr -> TypeCheckerMonad MyType
-    getExprType (EVar _ name) = getVarType name
+    getExprType (EVar _ name) = getTypeFromEnv name
     getExprType (ELitInt _ _) = return MyInt
     getExprType (ELitTrue _) = return MyBool
     getExprType (ELitFalse _) = return MyBool
-    getExprType (EApp _ name _) = getVarType name
     getExprType (EString _ _) = return MyStr
+    
+    getExprType (EApp pos name args) = do
+        tmp <- getTypeFromEnv name
+        case tmp of
+            MyFun typ argsTypes -> do
+                argsTypes' <- mapM getExprType args
+                if argsTypes == argsTypes' then return typ
+                else throwError ("Wrong type, " ++ (showPosition pos))
+            _ -> throwError ("Wrong type, " ++ (showPosition pos))
+    
     getExprType (Neg _ expr) = do
         exprType <- getExprType expr
         case exprType of
             MyInt -> return MyInt
             _ -> throwError "'-' requires operand to be Int"
+    
     getExprType (Not _ expr) = do
         exprType <- getExprType expr
         case exprType of
             MyBool -> return MyBool
             _ -> throwError "! requires operand to be Bool"
+    
     getExprType (EMul _ expr1 op expr2) = do
         exprType1 <- getExprType expr1
         exprType2 <- getExprType expr2
@@ -72,6 +99,7 @@ module TypeChecker where
             handleDiv _ _ = throwError "'/' requires both operands to be Ints"
             handleMod MyInt MyInt = return MyInt
             handleMod _ _ = throwError "'%' requires both operands to be Ints"
+    
     getExprType (EAdd _ expr1 op expr2) = do
         exprType1 <- getExprType expr1
         exprType2 <- getExprType expr2
@@ -117,9 +145,10 @@ module TypeChecker where
     handleLogicalOp MyBool MyBool = return MyBool
     handleLogicalOp _ _ = throwError "Logical operations require operands of type Bool"
     
-    getVarType :: Ident -> TypeCheckerMonad MyType
-    getVarType (Ident name) = do
+    getTypeFromEnv :: Ident -> TypeCheckerMonad MyType
+    getTypeFromEnv (Ident name) = do
         env <- ask
+        -- throwError (show env)
         case Map.lookup (Ident name) env of
-            Just typ -> return $ toMyType typ
+            Just typ -> return typ
             Nothing -> throwError (name ++ " is not defined")
