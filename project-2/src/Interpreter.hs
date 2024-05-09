@@ -18,7 +18,7 @@ run (Left err) = do
     print err
     exitFailure
 run (Right tree) = do
-    result <- runExceptT $ runReaderT (typeCheck tree) Map.empty
+    result <- runExceptT $ runReaderT (typeCheck tree) (Map.empty, False)
     case result of
         Right () -> putStrLn "Type checking successful"
         Left err -> putStrLn $ "Type checking failed: " ++ err
