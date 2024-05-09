@@ -48,24 +48,24 @@ module TypeChecker where
         env <- ask
         return $ Map.insert name (toMyType typ) env
     
-    checkTopDef (VarDefAss _ typ name expr) = do
+    checkTopDef (VarDefAss pos typ name expr) = do
         env <- ask
         let typ' = toMyType typ
         exprType <- getExprType expr
         if typ' == exprType then
             return $ Map.insert name typ' env
         else
-            throwError "Wrong type"
+            throwError ("Wrong type" ++ (showPosition pos))
     
     getExprType :: Expr -> TypeCheckerMonad MyType
-    getExprType (EVar _ name) = getTypeFromEnv name
+    getExprType (EVar pos name) = getTypeFromEnv pos name
     getExprType (ELitInt _ _) = return MyInt
     getExprType (ELitTrue _) = return MyBool
     getExprType (ELitFalse _) = return MyBool
     getExprType (EString _ _) = return MyStr
     
     getExprType (EApp pos name args) = do
-        tmp <- getTypeFromEnv name
+        tmp <- getTypeFromEnv pos name
         case tmp of
             MyFun typ argsTypes -> do
                 argsTypes' <- mapM getExprType args
@@ -73,19 +73,19 @@ module TypeChecker where
                 else throwError ("Wrong type, " ++ (showPosition pos))
             _ -> throwError ("Wrong type, " ++ (showPosition pos))
     
-    getExprType (Neg _ expr) = do
+    getExprType (Neg pos expr) = do
         exprType <- getExprType expr
         case exprType of
             MyInt -> return MyInt
-            _ -> throwError "'-' requires operand to be Int"
+            _ -> throwError ("'-' requires operand to be Int, " ++ (showPosition pos))
     
-    getExprType (Not _ expr) = do
+    getExprType (Not pos expr) = do
         exprType <- getExprType expr
         case exprType of
             MyBool -> return MyBool
-            _ -> throwError "! requires operand to be Bool"
+            _ -> throwError ("! requires operand to be Bool, " ++ (showPosition pos))
     
-    getExprType (EMul _ expr1 op expr2) = do
+    getExprType (EMul pos expr1 op expr2) = do
         exprType1 <- getExprType expr1
         exprType2 <- getExprType expr2
         case op of
@@ -94,13 +94,13 @@ module TypeChecker where
             Mod _   -> handleMod exprType1 exprType2
         where
             handleMul MyInt MyInt = return MyInt
-            handleMul _ _ = throwError "'*' requires both operands to be Ints"
+            handleMul _ _ = throwError ("'*' requires both operands to be Ints, " ++ (showPosition pos))
             handleDiv MyInt MyInt = return MyInt
-            handleDiv _ _ = throwError "'/' requires both operands to be Ints"
+            handleDiv _ _ = throwError ("'/' requires both operands to be Ints, " ++ (showPosition pos))
             handleMod MyInt MyInt = return MyInt
-            handleMod _ _ = throwError "'%' requires both operands to be Ints"
+            handleMod _ _ = throwError ("'%' requires both operands to be Ints, " ++ (showPosition pos))
     
-    getExprType (EAdd _ expr1 op expr2) = do
+    getExprType (EAdd pos expr1 op expr2) = do
         exprType1 <- getExprType expr1
         exprType2 <- getExprType expr2
         case op of
@@ -108,11 +108,11 @@ module TypeChecker where
             Minus _ -> handleSub exprType1 exprType2
         where
             handleAdd MyInt MyInt = return MyInt
-            handleAdd _ _ = throwError "'+' requires both operands to be Ints"
+            handleAdd _ _ = throwError ("'+' requires both operands to be Ints, " ++ (showPosition pos))
             handleSub MyInt MyInt = return MyInt
-            handleSub _ _ = throwError "'-' requires both operands to be Ints"
+            handleSub _ _ = throwError ("'-' requires both operands to be Ints, " ++ (showPosition pos))
     
-    getExprType (ERel _ expr1 op expr2) = do
+    getExprType (ERel pos expr1 op expr2) = do
         exprType1 <- getExprType expr1
         exprType2 <- getExprType expr2
         case op of
@@ -126,29 +126,28 @@ module TypeChecker where
             handleComparison MyInt MyInt = return MyBool
             handleComparison MyStr MyStr = return MyBool
             handleComparison MyBool MyBool = return MyBool
-            handleComparison _ _ = throwError "Comparison requires operands of compatible types"
+            handleComparison _ _ = throwError ("Comparison requires operands of compatible types, " ++ (showPosition pos))
             handleEquality ty1 ty2
                 | ty1 == ty2 = return MyBool
-                | otherwise = throwError "Equality requires operands of the same type"
+                | otherwise = throwError ("Equality requires operands of the same type, " ++ (showPosition pos))
     
-    getExprType (EAnd _ expr1 expr2) = do
+    getExprType (EAnd pos expr1 expr2) = do
         exprType1 <- getExprType expr1
         exprType2 <- getExprType expr2
-        handleLogicalOp exprType1 exprType2
+        handleLogicalOp pos exprType1 exprType2
     
-    getExprType (EOr _ expr1 expr2) = do
+    getExprType (EOr pos expr1 expr2) = do
         exprType1 <- getExprType expr1
         exprType2 <- getExprType expr2
-        handleLogicalOp exprType1 exprType2
+        handleLogicalOp pos exprType1 exprType2
     
-    handleLogicalOp :: MyType -> MyType -> TypeCheckerMonad MyType
-    handleLogicalOp MyBool MyBool = return MyBool
-    handleLogicalOp _ _ = throwError "Logical operations require operands of type Bool"
+    handleLogicalOp :: Maybe (Int, Int) -> MyType -> MyType -> TypeCheckerMonad MyType
+    handleLogicalOp pos MyBool MyBool = return MyBool
+    handleLogicalOp pos _ _ = throwError ("Logical operations require operands of type Bool, " ++ (showPosition pos))
     
-    getTypeFromEnv :: Ident -> TypeCheckerMonad MyType
-    getTypeFromEnv (Ident name) = do
+    getTypeFromEnv :: Maybe (Int, Int) -> Ident -> TypeCheckerMonad MyType
+    getTypeFromEnv pos (Ident name) = do
         env <- ask
-        -- throwError (show env)
         case Map.lookup (Ident name) env of
             Just typ -> return typ
-            Nothing -> throwError (name ++ " is not defined")
+            Nothing -> throwError (name ++ " is not defined" ++ (showPosition pos))
