@@ -6,6 +6,7 @@ module TypeChecker where
     import Control.Monad.State
     import Control.Monad.Except
     import Data.Map as Map
+    import Data.Maybe
     import qualified Data.List as List
     import Text.ParserCombinators.ReadP (get)
     
@@ -35,6 +36,9 @@ module TypeChecker where
         where
             go :: [TopDef] -> TypeCheckerMonad ()
             go [] = return ()
+            -- go [] = do
+            --     env <- ask
+            --     throwError (show env)
             go (x:xs) = do
                 env <- checkTopDef x
                 local (const env) (go xs)
@@ -55,7 +59,12 @@ module TypeChecker where
         else do
             let typ' = toMyType typ
                 args' = Prelude.map toMyTypeArg args
-            return $ Map.insert name (MyFun typ' args') env
+                env' = Map.insert name (MyFun typ' (Prelude.map (\arg -> toMyType typ) args)) env
+                insertArgToEnv env'' (ValArg _ typ argIdent) = Map.insert argIdent (toMyType typ) env''
+                insertArgToEnv env'' (RefArg _ typ argIdent) = Map.insert argIdent (toMyType typ) env''
+                envWithArgs = Prelude.foldl insertArgToEnv env' args
+            local (const envWithArgs) (checkBlock block)
+            return env'
     
     checkTopDef (VarDef _ typ name) = do
         env <- ask
@@ -69,6 +78,90 @@ module TypeChecker where
             return $ Map.insert name typ' env
         else
             throwError ("Wrong type" ++ (showPosition pos))
+    
+    checkBlock :: Block -> TypeCheckerMonad (Env, Maybe MyType)
+    checkBlock (Blk _ stmts) =
+        go stmts
+        where
+            go :: [Stmt] -> TypeCheckerMonad (Env, Maybe MyType)
+            go [] = do
+                env <- ask
+                return (env, Nothing)
+            go (x:xs) = do
+                (env, typ) <- checkStmt x
+                if isNothing typ then
+                    local (const env) (go xs)
+                else
+                    return (env, typ)
+    
+    checkStmt :: Stmt -> TypeCheckerMonad (Env, Maybe MyType)
+    
+    checkStmt (Empty _) = do
+        env <- ask
+        return (env, Nothing)
+    
+    checkStmt (BStmt _ block) = do
+        env <- ask
+        (env', ret) <- checkBlock block
+        return (env, ret)
+    
+    checkStmt (DStmt _ topDef) = do
+        env <- checkTopDef topDef
+        return (env, Nothing)
+    
+    checkStmt (Ass pos (Ident name) expr) = do
+        env <- ask
+        case Map.lookup (Ident name) env of
+            Nothing -> throwError (name ++ " is not defined, " ++ (showPosition pos))
+            Just typ -> do
+                typ' <- getExprType expr
+                if typ /= typ' then throwError ("Expresion of a wrong type, " ++ (showPosition pos))
+                else return (env, Nothing)
+    
+    checkStmt (Ret _ expr) = do
+        env <- ask
+        typ <- getExprType expr
+        return (env, Just typ)
+    
+    checkStmt (VRet _) = do
+        env <- ask
+        return (env, Just MyVoid)
+    
+    checkStmt (Cond pos expr block) = do
+        typ <- getExprType expr
+        if typ /= MyBool then
+            throwError ("Expression must be of type Bool, " ++ (showPosition pos))
+        else
+            checkBlock block
+    
+    checkStmt (CondElse pos expr block1 block2) = do
+        env <- ask
+        typ <- getExprType expr
+        if typ /= MyBool then
+            throwError ("Expression must be of type Bool, " ++ (showPosition pos))
+        else do
+            (env1, typ1) <- checkBlock block1
+            (env2, typ2) <- checkBlock block2
+            case (typ1, typ2) of
+                (Nothing, Nothing) -> return (env, Nothing)
+                (Just a, Just b) -> do
+                    if a /= b then
+                        throwError ("Types do not match, " ++ (showPosition pos))
+                    else
+                        return (env, typ1)
+                (_, _) -> throwError ("Types do not match, " ++ (showPosition pos))
+    
+    checkStmt (While pos expr block) = do
+        typ <- getExprType expr
+        if typ /= MyBool then
+            throwError ("Expression must be of type Bool, " ++ (showPosition pos))
+        else
+            checkBlock block
+    
+    checkStmt (SExp pos expr) = do
+        env <- ask
+        getExprType expr
+        return (env, Nothing)
     
     getExprType :: Expr -> TypeCheckerMonad MyType
     getExprType (EVar pos name) = getTypeFromEnv pos name
@@ -163,4 +256,4 @@ module TypeChecker where
         env <- ask
         case Map.lookup (Ident name) env of
             Just typ -> return typ
-            Nothing -> throwError (name ++ " is not defined" ++ (showPosition pos))
+            Nothing -> throwError (name ++ " is not defined, " ++ (showPosition pos))
