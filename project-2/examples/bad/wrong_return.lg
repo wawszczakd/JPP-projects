@@ -1,0 +1,9 @@
+int f() {
+    return "abc"; // compile error
+}
+
+int main() {
+    print(f());
+    
+    return 0;
+}
