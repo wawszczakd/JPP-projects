@@ -35,7 +35,12 @@ module TypeChecker where
         go xs
         where
             go :: [TopDef] -> TypeCheckerMonad ()
-            go [] = return ()
+            go [] = do
+                (env, _) <- ask
+                let tmp = Map.lookup (Ident "main") env
+                case tmp of
+                    Just (MyFun MyInt []) -> return ()
+                    _ -> throwError "'main' must be a no-argument function that returns int"
             go (x:xs) = do
                 env <- checkTopDef x
                 local (const env) (go xs)
