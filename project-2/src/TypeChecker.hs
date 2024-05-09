@@ -63,8 +63,17 @@ module TypeChecker where
                 insertArgToEnv env'' (ValArg _ typ argIdent) = Map.insert argIdent (toMyType typ) env''
                 insertArgToEnv env'' (RefArg _ typ argIdent) = Map.insert argIdent (toMyType typ) env''
                 envWithArgs = Prelude.foldl insertArgToEnv env' args
-            local (const envWithArgs) (checkBlock block)
-            return env'
+            (_, typ'') <- local (const envWithArgs) (checkBlock block)
+            case typ'' of
+                Nothing -> do
+                    if typ' == MyVoid then
+                        return env'
+                    else
+                        throwError ("No return in non-void function, " ++ (showPosition pos))
+                Just typ''' -> do
+                    if typ''' == typ' then
+                        return env'
+                    else throwError ("Wrong return type, " ++ (showPosition pos))
     
     checkTopDef (VarDef _ typ name) = do
         env <- ask
