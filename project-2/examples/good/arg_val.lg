@@ -6,6 +6,7 @@ int twice(int x) {
 int main() {
     int x = 5;
     print(twice(x)); // 10
+    print(x); // 5
 
     return 0;
 }

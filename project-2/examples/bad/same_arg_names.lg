@@ -1,0 +1,9 @@
+int f(int x, int x) { // compile error
+    return 0;
+}
+
+int main() {
+    print(f(1, 2));
+    
+    return 0;
+}
