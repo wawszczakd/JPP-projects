@@ -6,6 +6,7 @@ module TypeChecker where
     import Control.Monad.State
     import Control.Monad.Except
     import Data.Map as Map
+    import qualified Data.List as List
     import Text.ParserCombinators.ReadP (get)
     
     showPosition :: Maybe (Int, Int) -> String
@@ -19,6 +20,7 @@ module TypeChecker where
     toMyType (Bool _) = MyBool
     toMyType (Void _) = MyVoid
     toMyType (Fun _ typ args) = MyFun (toMyType typ) (Prelude.map toMyType args)
+    
     toMyTypeArg :: Arg -> MyType
     toMyTypeArg (ValArg _ typ _) = toMyType typ
     toMyTypeArg (RefArg _ typ _) = toMyType typ
@@ -37,12 +39,23 @@ module TypeChecker where
                 env <- checkTopDef x
                 local (const env) (go xs)
     
+    checkArgsNames :: Maybe (Int, Int) -> [Arg] -> Bool
+    checkArgsNames pos args =
+        let args' = Prelude.map (\arg -> case arg of
+                                    ValArg _ _ name -> name
+                                    RefArg _ _ name -> name) args
+        in if List.nub args' == args' then True
+        else False
+    
     checkTopDef :: TopDef -> TypeCheckerMonad Env
-    checkTopDef (FnDef _ typ name args block) = do
+    checkTopDef (FnDef pos typ name args block) = do
         env <- ask
-        let typ' = toMyType typ
-            args' = Prelude.map toMyTypeArg args
-        return $ Map.insert name (MyFun typ' args') env
+        if not (checkArgsNames pos args) then
+            throwError ("Function args names must be pairwise distinct, " ++ (showPosition pos))
+        else do
+            let typ' = toMyType typ
+                args' = Prelude.map toMyTypeArg args
+            return $ Map.insert name (MyFun typ' args') env
     
     checkTopDef (VarDef _ typ name) = do
         env <- ask
