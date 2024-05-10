@@ -1,0 +1,7 @@
+int main() {
+    return 0; // no errors below
+    int x = y * "abc";
+    bool z = x + 5;
+    break;
+    return "abc";
+}
