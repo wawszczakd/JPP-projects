@@ -146,11 +146,13 @@ module TypeChecker where
         return (env, Just MyVoid)
     
     checkStmt (Cond pos expr block) = do
+        env <- ask
         typ <- getExprType expr
         if typ /= MyBool then
             throwError ("Expression must be of type Bool, " ++ (showPosition pos))
-        else
-            checkBlock block
+        else do
+            (env', typ') <- checkBlock block
+            return (env', Nothing)
     
     checkStmt (CondElse pos expr block1 block2) = do
         env <- ask
