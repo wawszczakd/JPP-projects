@@ -2,6 +2,7 @@
 
 module TypeChecker where
     import AbsLagerLang
+    import Common
     import Control.Monad.Reader
     import Control.Monad.State
     import Control.Monad.Except
@@ -9,10 +10,6 @@ module TypeChecker where
     import Data.Maybe
     import qualified Data.List as List
     import Text.ParserCombinators.ReadP (get)
-    
-    showPosition :: Maybe (Int, Int) -> String
-    showPosition Nothing = "position unknown"
-    showPosition (Just (row, col)) = "row: " ++ (show row) ++ ", column: " ++ (show col)
     
     data MyType = MyInt | MyStr | MyBool | MyVoid | MyFun MyType [MyType] deriving (Eq, Show)
     toMyType :: Type -> MyType

@@ -12,7 +12,9 @@ executable lager-lang
         AbsLagerLang,
         ParLagerLang,
         LexLagerLang,
+        Common,
         TypeChecker,
+        Evaluator,
         Interpreter
 
     build-depends:
