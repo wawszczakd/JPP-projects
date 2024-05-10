@@ -60,25 +60,33 @@ module TypeChecker where
             throwError ("Function args names must be pairwise distinct, " ++ (showPosition pos))
         else do
             let typ' = toMyType typ
-                env' = Map.insert name (MyFun typ' (Prelude.map (\arg -> toMyTypeArg arg) args)) env
-                insertArgToEnv env'' (ValArg _ typ argIdent) = Map.insert argIdent (toMyType typ) env''
-                insertArgToEnv env'' (RefArg _ typ argIdent) = Map.insert argIdent (toMyType typ) env''
-                envWithArgs = Prelude.foldl insertArgToEnv env' args
-            (_, typ'') <- local (const (envWithArgs, False)) (checkBlock block)
-            case typ'' of
-                Nothing -> do
-                    if typ' == MyVoid then
-                        return (env', isLoop)
-                    else
-                        throwError ("No return in non-void function, " ++ (showPosition pos))
-                Just typ''' -> do
-                    if typ''' == typ' then
-                        return (env', isLoop)
-                    else throwError ("Wrong return type, " ++ (showPosition pos))
+                argTypes = Prelude.map (\arg -> toMyTypeArg arg) args
+            if elem MyVoid argTypes then do
+                throwError ("Argument cannot be of type void, " ++ (showPosition pos))
+            else do
+                let env' = Map.insert name (MyFun typ' argTypes) env
+                    insertArgToEnv env'' (ValArg _ typ argIdent) = Map.insert argIdent (toMyType typ) env''
+                    insertArgToEnv env'' (RefArg _ typ argIdent) = Map.insert argIdent (toMyType typ) env''
+                    envWithArgs = Prelude.foldl insertArgToEnv env' args
+                (_, typ'') <- local (const (envWithArgs, False)) (checkBlock block)
+                case typ'' of
+                    Nothing -> do
+                        if typ' == MyVoid then
+                            return (env', isLoop)
+                        else
+                            throwError ("No return in non-void function, " ++ (showPosition pos))
+                    Just typ''' -> do
+                        if typ''' == typ' then
+                            return (env', isLoop)
+                        else throwError ("Wrong return type, " ++ (showPosition pos))
     
-    checkTopDef (VarDef _ typ name) = do
+    checkTopDef (VarDef pos typ name) = do
         (env, isLoop) <- ask
-        return (Map.insert name (toMyType typ) env, isLoop)
+        let typ' = toMyType typ
+        if typ' == MyVoid then
+            throwError ("Variable of type void cannot be declared, " ++ (showPosition pos))
+        else
+            return (Map.insert name typ' env, isLoop)
     
     checkTopDef (VarDefAss pos typ name expr) = do
         (env, isLoop) <- ask
