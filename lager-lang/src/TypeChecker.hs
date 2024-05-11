@@ -27,8 +27,8 @@ module TypeChecker where
     
     type TypeCheckerMonad = ReaderT Env (ExceptT String IO)
     
-    typeCheck :: Program -> TypeCheckerMonad ()
-    typeCheck (Prog _ xs) =
+    checkProgram :: Program -> TypeCheckerMonad ()
+    checkProgram (Prog _ xs) =
         go xs
         where
             go :: [TopDef] -> TypeCheckerMonad ()
@@ -66,6 +66,7 @@ module TypeChecker where
                 False
     
     checkTopDef :: TopDef -> TypeCheckerMonad Env
+    
     checkTopDef (FnDef pos typ name args block) = do
         (env, isLoop) <- ask
         if not (checkArgsNames pos args) then
