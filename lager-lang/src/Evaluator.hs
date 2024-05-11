@@ -33,7 +33,7 @@ module Evaluator where
         env <- ask
         (store, lastLoc) <- get
         let env' = Map.insert name lastLoc env
-        put (Map.insert lastLoc (MyFun args block env) store, lastLoc + 1)
+        put (Map.insert lastLoc (MyFun args block env') store, lastLoc + 1)
         return env'
     
     evalTopDef (VarDef _ typ name) = do
@@ -150,17 +150,32 @@ module Evaluator where
                 MyStr val -> val
                 MyBool True -> "true"
                 MyBool False -> "false"
-        liftIO $ print showable
+        liftIO $ putStrLn showable
         env <- ask
         return (env, Nothing)
+    
+    insertArgs :: [Arg] -> [Expr] -> Env -> EvaluatorMonad Env
+    insertArgs [] [] _ = ask
+    insertArgs ((ValArg _ _ name):args) (expr:exprs) env = do
+        funEnv <- insertArgs args exprs env
+        val <- local (const env) (evalExpr expr)
+        (store, lastLoc) <- get
+        let funEnv' = Map.insert name lastLoc funEnv
+        put (Map.insert lastLoc val store, lastLoc + 1)
+        return funEnv'
+    insertArgs ((RefArg _ _ name):args) ((EVar _ origName):exprs) env = do
+        funEnv <- insertArgs args exprs env
+        let Just loc = Map.lookup origName env
+            funEnv' = Map.insert name loc funEnv
+        return funEnv'
     
     evalExpr :: Expr -> EvaluatorMonad MyVal
     
     evalExpr (EVar _ name) = do
         env <- ask
-        let Just loc = Map.lookup name env
         (store, _) <- get
-        let Just val = Map.lookup loc store
+        let Just loc = Map.lookup name env
+            Just val = Map.lookup loc store
         return val
     
     evalExpr (ELitInt _ val) = return $ MyInt val
@@ -169,7 +184,16 @@ module Evaluator where
     
     evalExpr (ELitFalse _) = return $ MyBool False
     
-    evalExpr (EApp _ name args) = return $ MyInt 0
+    evalExpr (EApp _ name exprs) = do
+        env <- ask
+        (store, _) <- get
+        let Just loc = Map.lookup name env
+            Just (MyFun args block funEnv) = Map.lookup loc store
+        funEnv' <- local (const funEnv) (insertArgs args exprs env)
+        (funEnv'', ret) <- local (const funEnv') (evalBlock block)
+        case ret of
+            Nothing -> return MyVoid
+            Just ret' -> return ret'
     
     evalExpr (EString _ s) = return $ MyStr s
     
@@ -207,8 +231,8 @@ module Evaluator where
             Minus _ -> return $ MyInt (val1 - val2)
     
     evalExpr (ERel _ expr1 op expr2) = do
-        MyBool val1 <- evalExpr expr1
-        MyBool val2 <- evalExpr expr2
+        MyInt val1 <- evalExpr expr1
+        MyInt val2 <- evalExpr expr2
         case op of
             LTH _  -> return $ MyBool (val1 < val2)
             LE _   -> return $ MyBool (val1 <= val2)

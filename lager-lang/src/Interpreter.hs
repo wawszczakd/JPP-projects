@@ -24,7 +24,12 @@ module Interpreter where
         print err
         exitFailure
     run (Right tree) = do
-        result <- runExceptT $ runReaderT (checkProgram tree) (Map.empty, False)
-        case result of
-            Right () -> putStrLn "Type checking successful"
+        res <- runExceptT $ runReaderT (checkProgram tree) (Map.empty, False)
+        case res of
+            Right () -> do
+                putStrLn "Type checking successful"
+                res' <-  runExceptT $ runStateT (runReaderT (evalProgram tree) Map.empty) (Map.empty, 0)
+                case res' of
+                    Right ((), _) -> putStrLn "Runtime finished"
+                    Left err -> putStrLn $ "Runtime error: " ++ err
             Left err -> putStrLn $ "Type checking failed: " ++ err
