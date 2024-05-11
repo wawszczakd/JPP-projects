@@ -5,7 +5,7 @@ void f(int &x) {
 int main() {
     int a = 1;
     int b = 2;
-    f(a + b);
+    f(a + b); // compile error
     
     return 0;
 }

@@ -5,3 +5,6 @@ int f(int x) {
 int g(int y) {
     return y + 1;
 }
+
+// no main
+// compile error
