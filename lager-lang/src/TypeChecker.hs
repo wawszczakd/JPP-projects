@@ -17,7 +17,6 @@ module TypeChecker where
     toMyType (Str _) = MyStr
     toMyType (Bool _) = MyBool
     toMyType (Void _) = MyVoid
-    -- toMyType (Fun _ typ args) = MyFun (toMyType typ) (Prelude.map toMyArg args)
     
     data MyArg = MyValArg MyType | MyRefArg MyType deriving (Eq, Show)
     toMyArg :: Arg -> MyArg
@@ -49,7 +48,6 @@ module TypeChecker where
         let argsNames = Prelude.map (\arg -> case arg of
                                          ValArg _ _ name -> name
                                          RefArg _ _ name -> name) args
-            
         in
             if List.nub argsNames == argsNames then
                 True
