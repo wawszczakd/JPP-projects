@@ -216,7 +216,7 @@ module Evaluator where
                 if val2 == 0 then
                     throwError ("Runtime error: division by 0, " ++ (showPosition pos))
                 else
-                    return $ MyInt (val1 * val2)
+                    return $ MyInt (div val1 val2)
             Mod _ ->
                 if val2 == 0 then
                     throwError ("Runtime error: division by 0, " ++ (showPosition pos))

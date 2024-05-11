@@ -31,5 +31,5 @@ module Interpreter where
                 res' <-  runExceptT $ runStateT (runReaderT (evalProgram tree) Map.empty) (Map.empty, 0)
                 case res' of
                     Right ((), _) -> putStrLn "Runtime finished"
-                    Left err -> putStrLn $ "Runtime error: " ++ err
+                    Left err -> putStrLn err
             Left err -> putStrLn $ "Type checking failed: " ++ err
