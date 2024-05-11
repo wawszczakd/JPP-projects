@@ -1,0 +1,12 @@
+int f(int x) {
+    int g(int x) {
+        return x * 2;
+    }
+    return g(x + 3);
+}
+
+int main() {
+    print(f(5));
+    
+    return 0;
+}
