@@ -7,7 +7,7 @@ maintainer:         Dominik Wawszczak
 
 executable lager-lang
     main-is: Main.hs
-
+    
     other-modules:
         AbsLagerLang,
         ParLagerLang,
@@ -16,7 +16,7 @@ executable lager-lang
         TypeChecker,
         Evaluator,
         Interpreter
-
+    
     build-depends:
         base ^>=4.15.1.0,
         array ^>=0.5.4.0,

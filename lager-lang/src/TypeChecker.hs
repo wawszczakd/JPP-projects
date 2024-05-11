@@ -11,17 +11,18 @@ module TypeChecker where
     import qualified Data.List as List
     import Text.ParserCombinators.ReadP (get)
     
-    data MyType = MyInt | MyStr | MyBool | MyVoid | MyFun MyType [MyType] deriving (Eq, Show)
+    data MyType = MyInt | MyStr | MyBool | MyVoid | MyFun MyType [MyArg] deriving (Eq, Show)
     toMyType :: Type -> MyType
     toMyType (Int _) = MyInt
     toMyType (Str _) = MyStr
     toMyType (Bool _) = MyBool
     toMyType (Void _) = MyVoid
-    toMyType (Fun _ typ args) = MyFun (toMyType typ) (Prelude.map toMyType args)
+    -- toMyType (Fun _ typ args) = MyFun (toMyType typ) (Prelude.map toMyArg args)
     
-    toMyTypeArg :: Arg -> MyType
-    toMyTypeArg (ValArg _ typ _) = toMyType typ
-    toMyTypeArg (RefArg _ typ _) = toMyType typ
+    data MyArg = MyValArg MyType | MyRefArg MyType deriving (Eq, Show)
+    toMyArg :: Arg -> MyArg
+    toMyArg (ValArg _ typ _) = MyValArg (toMyType typ)
+    toMyArg (RefArg _ typ _) = MyRefArg (toMyType typ)
     
     type Env = (Map.Map Ident MyType, Bool)
     
@@ -36,6 +37,7 @@ module TypeChecker where
                 (env, _) <- ask
                 let tmp = Map.lookup (Ident "main") env
                 case tmp of
+                    Nothing -> throwError "'main' is not defined"
                     Just (MyFun MyInt []) -> return ()
                     _ -> throwError "'main' must be a no-argument function that returns int"
             go (x:xs) = do
@@ -44,38 +46,53 @@ module TypeChecker where
     
     checkArgsNames :: Maybe (Int, Int) -> [Arg] -> Bool
     checkArgsNames pos args =
-        let args' = Prelude.map (\arg -> case arg of
-                                    ValArg _ _ name -> name
-                                    RefArg _ _ name -> name) args
-        in if List.nub args' == args' then True
-        else False
+        let argsNames = Prelude.map (\arg -> case arg of
+                                         ValArg _ _ name -> name
+                                         RefArg _ _ name -> name) args
+            
+        in
+            if List.nub argsNames == argsNames then
+                True
+            else
+                False
+    
+    checkArgsTypes :: Maybe (Int, Int) -> [Arg] -> Bool
+    checkArgsTypes pos args =
+        let argsTypes = Prelude.map (\arg -> case arg of
+                                         ValArg _ typ _ -> toMyType typ
+                                         RefArg _ typ _ -> toMyType typ) args
+        in
+            if not (elem MyVoid argsTypes) then
+                True
+            else
+                False
     
     checkTopDef :: TopDef -> TypeCheckerMonad Env
     checkTopDef (FnDef pos typ name args block) = do
         (env, isLoop) <- ask
         if not (checkArgsNames pos args) then
             throwError ("Function args names must be pairwise distinct, " ++ (showPosition pos))
+        else if not (checkArgsTypes pos args) then
+            throwError ("Argument cannot be of type void, " ++ (showPosition pos))
         else do
-            let typ' = toMyType typ
-                argTypes = Prelude.map (\arg -> toMyTypeArg arg) args
-            if elem MyVoid argTypes then do
-                throwError ("Argument cannot be of type void, " ++ (showPosition pos))
-            else do
-                let env' = Map.insert name (MyFun typ' argTypes) env
-                    insertArgToEnv env'' (ValArg _ typ argIdent) = Map.insert argIdent (toMyType typ) env''
-                    insertArgToEnv env'' (RefArg _ typ argIdent) = Map.insert argIdent (toMyType typ) env''
-                    envWithArgs = Prelude.foldl insertArgToEnv env' args
-                (_, typ'') <- local (const (envWithArgs, False)) (checkBlock block)
-                case typ'' of
-                    Nothing -> do
-                        if typ' == MyVoid then
-                            return (env', isLoop)
-                        else
-                            throwError ("No return in non-void function, " ++ (showPosition pos))
-                    Just typ''' -> do
-                        if typ''' == typ' then
-                            return (env', isLoop)
-                        else throwError ("Wrong return type, " ++ (showPosition pos))
+            let expectedType = toMyType typ
+                env' = Map.insert name (MyFun expectedType (Prelude.map toMyArg args)) env
+                env'' = Prelude.foldl (\envTmp arg ->
+                                        case arg of
+                                            ValArg _ typ argName -> Map.insert argName (toMyType typ) envTmp
+                                            RefArg _ typ argName -> Map.insert argName (toMyType typ) envTmp)
+                                   env' args
+            (_, realType) <- local (const (env'', False)) (checkBlock block)
+            case realType of
+                Nothing -> do
+                    if expectedType == MyVoid then
+                        return (env', isLoop)
+                    else
+                        throwError ("No return in non-void function, " ++ (showPosition pos))
+                Just someType -> do
+                    if someType == expectedType then
+                        return (env', isLoop)
+                    else throwError ("Wrong return type, " ++ (showPosition pos))
     
     checkTopDef (VarDef pos typ name) = do
         (env, isLoop) <- ask
@@ -204,21 +221,46 @@ module TypeChecker where
         else
             throwError ("Expression is not printable, " ++ (showPosition pos))
     
+    checkTypesMatch :: [MyArg] -> [MyType] -> Bool
+    checkTypesMatch [] [] = True
+    checkTypesMatch (arg:args) (typ:types) =
+        case arg of
+            MyValArg argType -> argType == typ && checkTypesMatch args types
+            MyRefArg argType -> argType == typ && checkTypesMatch args types
+    checkTypesMatch _ _ = False
+    
+    checkRefsMatch :: [MyArg] -> [Expr] -> Bool
+    checkRefsMatch [] [] = True
+    checkRefsMatch (arg:args) (expr:exprs) =
+        case arg of
+            MyRefArg typ -> case expr of
+                EVar _ _ -> checkRefsMatch args exprs
+                _ -> False
+            _ -> checkRefsMatch args exprs
+    checkRefsMatch _ _ = False
+    
     getExprType :: Expr -> TypeCheckerMonad MyType
+    
     getExprType (EVar pos name) = getTypeFromEnv pos name
+    
     getExprType (ELitInt _ _) = return MyInt
+    
     getExprType (ELitTrue _) = return MyBool
+    
     getExprType (ELitFalse _) = return MyBool
+    
     getExprType (EString _ _) = return MyStr
     
     getExprType (EApp pos name args) = do
         tmp <- getTypeFromEnv pos name
         case tmp of
-            MyFun typ argsTypes -> do
-                argsTypes' <- mapM getExprType args
-                if argsTypes == argsTypes' then return typ
-                else throwError ("Wrong type, " ++ (showPosition pos))
-            _ -> throwError ("Wrong type, " ++ (showPosition pos))
+            MyFun typ expectedArgs -> do
+                argsTypes <- mapM getExprType args
+                if not (checkTypesMatch expectedArgs argsTypes) then
+                    throwError ("Types do not match, " ++ (showPosition pos))
+                else if not (checkRefsMatch expectedArgs args) then
+                    throwError ("Only variables can be passed by reference, " ++ (showPosition pos))
+                else return typ
     
     getExprType (Neg pos expr) = do
         exprType <- getExprType expr

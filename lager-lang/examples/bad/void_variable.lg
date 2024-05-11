@@ -1,4 +1,5 @@
 int main() {
     void x; // compile error
+    
     return 0;
 }

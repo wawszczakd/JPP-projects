@@ -1,9 +1,0 @@
-int f(int x) {
-    return x;
-}
-
-int main() {
-    print(f("abc")); // compile error
-    
-    return 0;
-}
