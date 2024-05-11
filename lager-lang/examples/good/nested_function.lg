@@ -6,7 +6,7 @@ int f(int x) {
 }
 
 int main() {
-    print(f(5));
+    print(f(5)); // 16
     
     return 0;
 }

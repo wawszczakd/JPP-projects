@@ -1,0 +1,9 @@
+int main() {
+    print(6 + 4); // 10
+    print(6 - 4); // 2
+    print(6 * 4); // 24
+    print(6 / 4); // 1
+    print(6 % 4); // 2
+    
+    return 0;
+}

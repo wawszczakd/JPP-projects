@@ -1,11 +1,11 @@
-void twice(int &x) {
+void f(int &x) {
     x = x * 2;
 }
 
 int main() {
     int x = 5;
-    twice(x);
+    f(x);
     print(x); // 10
-
+    
     return 0;
 }

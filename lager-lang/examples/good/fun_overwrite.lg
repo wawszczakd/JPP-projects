@@ -1,0 +1,13 @@
+int f(int x) {
+    return x * 2;
+}
+
+int f(int x) {
+    return x * 3;
+}
+
+int main() {
+    print(f(5)); // 15
+    
+    return 0;
+}
