@@ -9,7 +9,6 @@ module TypeChecker where
     import Data.Map as Map
     import Data.Maybe
     import qualified Data.List as List
-    import Text.ParserCombinators.ReadP (get)
     
     data MyType = MyInt | MyStr | MyBool | MyVoid | MyFun MyType [MyArg] deriving (Eq, Show)
     toMyType :: Type -> MyType
@@ -28,8 +27,8 @@ module TypeChecker where
     type TypeCheckerMonad = ReaderT Env (ExceptT String IO)
     
     checkProgram :: Program -> TypeCheckerMonad ()
-    checkProgram (Prog _ xs) =
-        go xs
+    checkProgram (Prog _ topDefs) =
+        go topDefs
         where
             go :: [TopDef] -> TypeCheckerMonad ()
             go [] = do

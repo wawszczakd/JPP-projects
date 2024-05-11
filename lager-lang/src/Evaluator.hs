@@ -5,6 +5,7 @@ module Evaluator where
     import Control.Monad.State
     import Control.Monad.Except
     import Data.Map as Map
+    import Data.Maybe
     
     type Loc = Integer
     type Env = Map.Map Ident Loc
@@ -53,6 +54,105 @@ module Evaluator where
         let env' = Map.insert name lastLoc env
         put (Map.insert lastLoc val store, lastLoc + 1)
         return env'
+    
+    evalBlock :: Block -> EvaluatorMonad (Env, Maybe MyVal)
+    evalBlock (Blk _ stmts) = do
+        go stmts
+        where
+            go :: [Stmt] -> EvaluatorMonad (Env, Maybe MyVal)
+            go [] = do
+                env <- ask
+                return (env, Nothing)
+            go (x:xs) = do
+                (env, ret) <- evalStmt x
+                if isNothing ret then
+                    local (const env) (go xs)
+                else
+                    return (env, ret)
+    
+    evalStmt :: Stmt -> EvaluatorMonad (Env, Maybe MyVal)
+    
+    evalStmt (Empty _) = do
+        env <- ask
+        return (env, Nothing)
+    
+    evalStmt (BStmt _ block) = do
+        env <- ask
+        (env', ret) <- evalBlock block
+        return (env, ret)
+    
+    evalStmt (DStmt _ topDef) = do
+        env <- evalTopDef topDef
+        return (env, Nothing)
+    
+    evalStmt (Ass _ name expr) = do
+        env <- ask
+        val <- evalExpr expr
+        (store, lastLoc) <- get
+        let Just loc = Map.lookup name env
+        put (Map.insert loc val store, lastLoc)
+        return (env, Nothing)
+    
+    evalStmt (Ret _ expr) = do
+        env <- ask
+        val <- evalExpr expr
+        return (env, Just val)
+    
+    evalStmt (VRet _) = do
+        env <- ask
+        return (env, Just MyVoid)
+    
+    evalStmt (Cond _ expr block) = do
+        env <- ask
+        MyBool val <- evalExpr expr
+        if val then
+            evalBlock block
+        else
+            return (env, Nothing)
+    
+    evalStmt (CondElse _ expr block1 block2) = do
+        env <- ask
+        MyBool val <- evalExpr expr
+        if val then
+            evalBlock block1
+        else
+            evalBlock block2
+    
+    evalStmt (While _ expr block) = do
+        MyBool val <- evalExpr expr
+        if val then do
+            (env, ret) <- evalBlock block
+            if isNothing ret then
+                evalStmt (While Nothing expr block)
+            else
+                return (env, ret)
+        else do
+            env <- ask
+            return (env, Nothing)
+    
+    evalStmt (SExp _ expr) = do
+        env <- ask
+        val <- evalExpr expr
+        return (env, Nothing)
+    
+    evalStmt (Break _) = do
+        env <- ask
+        return (env, Nothing)
+    
+    evalStmt (Continue _) = do
+        env <- ask
+        return (env, Nothing)
+    
+    evalStmt (Print _ expr) = do
+        tmp <- evalExpr expr
+        let showable = case tmp of
+                MyInt val -> show val
+                MyStr val -> val
+                MyBool True -> "true"
+                MyBool False -> "false"
+        liftIO $ print showable
+        env <- ask
+        return (env, Nothing)
     
     evalExpr :: Expr -> EvaluatorMonad MyVal
     
