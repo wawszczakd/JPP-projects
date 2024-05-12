@@ -176,6 +176,8 @@ module TypeChecker where
             (env2, typ2) <- checkBlock block2
             case (typ1, typ2) of
                 (Nothing, Nothing) -> return (env, Nothing)
+                (Just MyVoid, Nothing) -> return (env, Just MyVoid)
+                (Nothing, Just MyVoid) -> return (env, Just MyVoid)
                 (Just a, Just b) -> do
                     if a /= b then
                         throwError ("Types do not match, " ++ (showPosition pos))
@@ -264,13 +266,13 @@ module TypeChecker where
         exprType <- getExprType expr
         case exprType of
             MyInt -> return MyInt
-            _ -> throwError ("'-' requires operand to be Int, " ++ (showPosition pos))
+            _ -> throwError ("'-' requires operand to be int, " ++ (showPosition pos))
     
     getExprType (Not pos expr) = do
         exprType <- getExprType expr
         case exprType of
             MyBool -> return MyBool
-            _ -> throwError ("! requires operand to be Bool, " ++ (showPosition pos))
+            _ -> throwError ("! requires operand to be bool, " ++ (showPosition pos))
     
     getExprType (EMul pos expr1 op expr2) = do
         exprType1 <- getExprType expr1
@@ -281,11 +283,11 @@ module TypeChecker where
             Mod _   -> handleMod exprType1 exprType2
         where
             handleMul MyInt MyInt = return MyInt
-            handleMul _ _ = throwError ("'*' requires both operands to be Ints, " ++ (showPosition pos))
+            handleMul _ _ = throwError ("'*' requires both operands to be ints, " ++ (showPosition pos))
             handleDiv MyInt MyInt = return MyInt
-            handleDiv _ _ = throwError ("'/' requires both operands to be Ints, " ++ (showPosition pos))
+            handleDiv _ _ = throwError ("'/' requires both operands to be ints, " ++ (showPosition pos))
             handleMod MyInt MyInt = return MyInt
-            handleMod _ _ = throwError ("'%' requires both operands to be Ints, " ++ (showPosition pos))
+            handleMod _ _ = throwError ("'%' requires both operands to be ints, " ++ (showPosition pos))
     
     getExprType (EAdd pos expr1 op expr2) = do
         exprType1 <- getExprType expr1
@@ -295,28 +297,17 @@ module TypeChecker where
             Minus _ -> handleSub exprType1 exprType2
         where
             handleAdd MyInt MyInt = return MyInt
-            handleAdd _ _ = throwError ("'+' requires both operands to be Ints, " ++ (showPosition pos))
+            handleAdd _ _ = throwError ("'+' requires both operands to be ints, " ++ (showPosition pos))
             handleSub MyInt MyInt = return MyInt
-            handleSub _ _ = throwError ("'-' requires both operands to be Ints, " ++ (showPosition pos))
+            handleSub _ _ = throwError ("'-' requires both operands to be ints, " ++ (showPosition pos))
     
     getExprType (ERel pos expr1 op expr2) = do
         exprType1 <- getExprType expr1
         exprType2 <- getExprType expr2
-        case op of
-            LTH _  -> handleComparison exprType1 exprType2
-            LE _   -> handleComparison exprType1 exprType2
-            GTH _  -> handleComparison exprType1 exprType2
-            GE _   -> handleComparison exprType1 exprType2
-            EQU _  -> handleEquality exprType1 exprType2
-            NE _   -> handleEquality exprType1 exprType2
-        where
-            handleComparison MyInt MyInt = return MyBool
-            handleComparison MyStr MyStr = return MyBool
-            handleComparison MyBool MyBool = return MyBool
-            handleComparison _ _ = throwError ("Comparison requires operands of compatible types, " ++ (showPosition pos))
-            handleEquality ty1 ty2
-                | ty1 == ty2 = return MyBool
-                | otherwise = throwError ("Equality requires operands of the same type, " ++ (showPosition pos))
+        if exprType1 == MyInt && exprType2 == MyInt then
+            return MyBool
+        else
+            throwError ("Comparison requires both operands to be ints, " ++ (showPosition pos))
     
     getExprType (EAnd pos expr1 expr2) = do
         exprType1 <- getExprType expr1

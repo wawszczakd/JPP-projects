@@ -8,7 +8,8 @@ module Evaluator where
     import Data.Maybe
     
     type Loc = Integer
-    type Env = Map.Map Ident Loc
+    data LoopFlag = Bre | Con
+    type Env = (Map.Map Ident Loc, Maybe LoopFlag)
     data MyVal = MyInt Integer | MyStr String | MyBool Bool | MyVoid | MyFun [Arg] Block Env
     type Store = (Map.Map Loc MyVal, Loc)
     
@@ -30,14 +31,14 @@ module Evaluator where
     evalTopDef :: TopDef -> EvaluatorMonad Env
     
     evalTopDef (FnDef _ _ name args block) = do
-        env <- ask
+        (env, _) <- ask
         (store, lastLoc) <- get
         let env' = Map.insert name lastLoc env
-        put (Map.insert lastLoc (MyFun args block env') store, lastLoc + 1)
-        return env'
+        put (Map.insert lastLoc (MyFun args block (env', Nothing)) store, lastLoc + 1)
+        return (env', Nothing)
     
     evalTopDef (VarDef _ typ name) = do
-        env <- ask
+        (env, _) <- ask
         (store, lastLoc) <- get
         let env' = Map.insert name lastLoc env
             store' = case typ of
@@ -45,15 +46,15 @@ module Evaluator where
                 Str _ -> (Map.insert lastLoc (MyStr "") store, lastLoc + 1)
                 Bool _ -> (Map.insert lastLoc (MyBool False) store, lastLoc + 1)
         put store'
-        return env'
+        return (env', Nothing)
     
     evalTopDef (VarDefAss _ typ name expr) = do
-        env <- ask
+        (env, _) <- ask
         (store, lastLoc) <- get
         val <- evalExpr expr
         let env' = Map.insert name lastLoc env
         put (Map.insert lastLoc val store, lastLoc + 1)
-        return env'
+        return (env', Nothing)
     
     evalBlock :: Block -> EvaluatorMonad (Env, Maybe MyVal)
     evalBlock (Blk _ stmts) = do
@@ -64,11 +65,11 @@ module Evaluator where
                 env <- ask
                 return (env, Nothing)
             go (x:xs) = do
-                (env, ret) <- evalStmt x
-                if isNothing ret then
-                    local (const env) (go xs)
+                ((env, loopFlag), ret) <- evalStmt x
+                if not (isNothing ret) || not (isNothing loopFlag) then
+                    return ((env, loopFlag), ret)
                 else
-                    return (env, ret)
+                    local (const (env, loopFlag)) (go xs)
     
     evalStmt :: Stmt -> EvaluatorMonad (Env, Maybe MyVal)
     
@@ -86,12 +87,12 @@ module Evaluator where
         return (env, Nothing)
     
     evalStmt (Ass _ name expr) = do
-        env <- ask
+        (env, _) <- ask
         val <- evalExpr expr
         (store, lastLoc) <- get
         let Just loc = Map.lookup name env
         put (Map.insert loc val store, lastLoc)
-        return (env, Nothing)
+        return ((env, Nothing), Nothing)
     
     evalStmt (Ret _ expr) = do
         env <- ask
@@ -121,11 +122,13 @@ module Evaluator where
     evalStmt (While _ expr block) = do
         MyBool val <- evalExpr expr
         if val then do
-            (env, ret) <- evalBlock block
-            if isNothing ret then
-                evalStmt (While Nothing expr block)
+            ((env, loopFlag), ret) <- evalBlock block
+            if not (isNothing ret) then
+                return ((env, Nothing), ret)
             else
-                return (env, ret)
+                case loopFlag of
+                    Just Bre -> return ((env, Nothing), Nothing)
+                    _ -> evalStmt (While Nothing expr block)
         else do
             env <- ask
             return (env, Nothing)
@@ -136,12 +139,12 @@ module Evaluator where
         return (env, Nothing)
     
     evalStmt (Break _) = do
-        env <- ask
-        return (env, Nothing)
+        (env, _) <- ask
+        return ((env, Just Bre), Nothing)
     
     evalStmt (Continue _) = do
-        env <- ask
-        return (env, Nothing)
+        (env, _) <- ask
+        return ((env, Just Con), Nothing)
     
     evalStmt (Print _ expr) = do
         tmp <- evalExpr expr
@@ -156,23 +159,23 @@ module Evaluator where
     
     insertArgs :: [Arg] -> [Expr] -> Env -> EvaluatorMonad Env
     insertArgs [] [] _ = ask
-    insertArgs ((ValArg _ _ name):args) (expr:exprs) env = do
-        funEnv <- insertArgs args exprs env
-        val <- local (const env) (evalExpr expr)
+    insertArgs ((ValArg _ _ name):args) (expr:exprs) (env, _) = do
+        (funEnv, _) <- insertArgs args exprs (env, Nothing)
+        val <- local (const (env, Nothing)) (evalExpr expr)
         (store, lastLoc) <- get
         let funEnv' = Map.insert name lastLoc funEnv
         put (Map.insert lastLoc val store, lastLoc + 1)
-        return funEnv'
-    insertArgs ((RefArg _ _ name):args) ((EVar _ origName):exprs) env = do
-        funEnv <- insertArgs args exprs env
+        return (funEnv', Nothing)
+    insertArgs ((RefArg _ _ name):args) ((EVar _ origName):exprs) (env, _) = do
+        (funEnv, _) <- insertArgs args exprs (env, Nothing)
         let Just loc = Map.lookup origName env
             funEnv' = Map.insert name loc funEnv
-        return funEnv'
+        return (funEnv', Nothing)
     
     evalExpr :: Expr -> EvaluatorMonad MyVal
     
     evalExpr (EVar _ name) = do
-        env <- ask
+        (env, _) <- ask
         (store, _) <- get
         let Just loc = Map.lookup name env
             Just val = Map.lookup loc store
@@ -185,11 +188,11 @@ module Evaluator where
     evalExpr (ELitFalse _) = return $ MyBool False
     
     evalExpr (EApp _ name exprs) = do
-        env <- ask
+        (env, _) <- ask
         (store, _) <- get
         let Just loc = Map.lookup name env
             Just (MyFun args block funEnv) = Map.lookup loc store
-        funEnv' <- local (const funEnv) (insertArgs args exprs env)
+        funEnv' <- local (const funEnv) (insertArgs args exprs (env, Nothing))
         (funEnv'', ret) <- local (const funEnv') (evalBlock block)
         case ret of
             Nothing -> return MyVoid
@@ -219,7 +222,7 @@ module Evaluator where
                     return $ MyInt (div val1 val2)
             Mod _ ->
                 if val2 == 0 then
-                    throwError ("Runtime error: division by 0, " ++ (showPosition pos))
+                    throwError ("Runtime error: modulo by 0, " ++ (showPosition pos))
                 else
                     return $ MyInt (mod val1 val2)
     
