@@ -6,7 +6,7 @@ int main() {
     
     string x = "abc";
     
-    print(f());
+    print(f()); // 5
     
     return 0;
 }

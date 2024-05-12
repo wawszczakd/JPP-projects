@@ -1,7 +1,0 @@
-int main() {
-    int x = 4;
-    string x = "abc";
-    print(x); // abc
-    
-    return 0;
-}

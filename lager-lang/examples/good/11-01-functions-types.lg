@@ -1,0 +1,19 @@
+int return_int(int x) {
+    return x;
+}
+
+bool return_bool(bool b) {
+    return b;
+}
+
+string return_string(string s) {
+    return s;
+}
+
+int main() {
+    print(return_int(7));        // 7
+    print(return_bool(true));    // true
+    print(return_string("abc")); // abc
+    
+    return 0;
+}

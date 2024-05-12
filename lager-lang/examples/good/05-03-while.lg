@@ -1,0 +1,15 @@
+int main() {
+    int x = 0;
+    while (x < 7) {
+        print(x); // 0, 1, 4 and 5
+        if (x % 2 == 0) {
+            x = x + 1;
+        }
+        else {
+            x = x + 3;
+        }
+    }
+    print(x); // 8
+    
+    return 0;
+}

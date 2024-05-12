@@ -1,0 +1,11 @@
+int square(int x) {
+    return x * x;
+}
+
+int main() {
+    print(square(5));  // 25
+    print(square(7));  // 49
+    print(square(32)); // 1024
+    
+    return 0;
+}

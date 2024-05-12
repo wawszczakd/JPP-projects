@@ -1,0 +1,5 @@
+int main() {
+    print("abc" <= "abcd"); // compile error
+    
+    return 0;
+}

@@ -1,0 +1,5 @@
+int main() {
+    print(true >= false); // compile error
+    
+    return 0;
+}

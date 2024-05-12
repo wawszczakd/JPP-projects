@@ -1,0 +1,12 @@
+int main() {
+    int x = 7;
+    print(x);
+    
+    bool b = true;
+    print(b);
+    
+    string s = "abc";
+    print(s);
+    
+    return 0;
+}

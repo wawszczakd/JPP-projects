@@ -1,0 +1,16 @@
+int x = 1;
+
+int f() {
+    int x = 2;
+    return x;
+}
+
+int main() {
+    print(f());       // 2
+    print(x);         // 1
+    
+    string x = "abc";
+    print(x);         // abc
+    
+    return 0;
+}

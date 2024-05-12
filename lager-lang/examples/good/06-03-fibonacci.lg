@@ -9,7 +9,9 @@ int fib(int n) {
 }
 
 int main() {
-    print(fib(10));
+    print(fib(4));  // 3
+    print(fib(6));  // 8
+    print(fib(10)); // 55
     
     return 0;
 }
