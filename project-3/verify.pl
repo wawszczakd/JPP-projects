@@ -78,8 +78,8 @@ check(_, Prog, State, Stack, Vis, Vis, bad(Inter, ProcsIds)) :-
     reverse(Stack, Inter).
 
 check(N, Prog, State, Stack, Vis, NewVis, Res) :-
-    iterateNeighbours(N, Prog, State, Stack, Vis, NewVis, Res, 0).
-    
+    iterateNeighbours(N, Prog, State, Stack, [State | Vis], NewVis, Res, 0).
+
 % iterateNeighbours(N, Prog, State, Stack, Vis, NewVis, Res, ProcId)
 iterateNeighbours(N, _, _, _, Vis, Vis, _, N).
 iterateNeighbours(N, Prog, state(Vars, Arrs, Insts), Stack, Vis, NewVis, Res, ProcId) :-
@@ -118,6 +118,7 @@ atPosition([_ | Tail], I, Res) :-
 % setPosition(+List, +I, +Val, -NewList)
 setPosition([_ | Tail], 0, Val, [Val | Tail]).
 setPosition([Head | Tail1], I, Val, [Head | Tail2]) :-
+    I > 0,
     I1 is I - 1,
     setPosition(Tail1, I1, Val, Tail2).
 
@@ -166,9 +167,9 @@ stepInst(sekcja, state(Vars, Arrs, Insts1), ProcId, InstNo,
     setPosition(Insts1, ProcId, InstNo1, Insts2).
 
 % evalExpr(+Expr, +Vars, +Arrs, +ProcId, -Val)
-evalExpr(N, _, _, _, N).
-
 evalExpr(pid, _, _, ProcId, ProcId).
+
+evalExpr(N, _, _, _, N) :- number(N).
 
 evalExpr(array(Name, Expr), Vars, Arrs, ProcId, Val) :-
     member((Name, Arr), Arrs),
@@ -176,7 +177,7 @@ evalExpr(array(Name, Expr), Vars, Arrs, ProcId, Val) :-
     atPosition(Arr, I, Val).
 
 evalExpr(Var, Vars, _, _, Val) :-
-    atPosition((Var, Val), Vars).
+    member((Var, Val), Vars).
 
 evalExpr(E1 + E2, Vars, Arrs, ProcId, Val) :-
     evalExpr(E1, Vars, Arrs, ProcId, Val1),
