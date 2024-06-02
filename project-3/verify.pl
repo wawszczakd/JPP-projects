@@ -4,7 +4,7 @@
 
 verify(N, _) :-
     (\+ integer(N); \+ N > 0),
-    format("Error: parametr 0 powinien być liczbą > 0~n").
+    format('Error: parametr 0 powinien być liczbą > 0~n').
 
 verify(N, File) :-
     set_prolog_flag(fileerrors, off),
@@ -17,15 +17,38 @@ verify(N, File) :-
     ; 
         initState(prog(VarsIds, ArrsIds, Stmts), N, State),
         check(N, prog(VarsIds, ArrsIds, Stmts), State, [], [], _, Res),
-        format("Check done~n")
+        ( var(Res) ->
+            exitSafe
+        ;
+            exitInter(Res)
+        )
     ),
     seen.
 
 verify(_, File) :-
-    format("Error: brak pliku o nazwie - ~w~n", [File]).
+    format('Error: brak pliku o nazwie - ~w~n', [File]).
 
 exitSafe :-
-    format("Program jest poprawny (bezpieczny).~n").
+    format('Program jest poprawny (bezpieczny).~n').
+
+exitInter(bad(Inter, ProcsIds)) :-
+    format('Program jest niepoprawny.~n'),
+    format('Niepoprawny przeplot:~n'),
+    printInterleaving(Inter),
+    format('Procesy w sekcji: '),
+    printProcsIds(ProcsIds).
+
+printInterleaving([]).
+printInterleaving([(ProcId, InstNo) | Tail]) :-
+    InstNo1 is InstNo + 1,
+    format('   Proces ~w: ~w~n', [ProcId, InstNo1]),
+    printInterleaving(Tail).
+
+printProcsIds([ProcId]) :-
+    format('~w.~n', [ProcId]).
+printProcsIds([ProcId | Tail]) :-
+    format('~w, ', [ProcId]),
+    printProcsIds(Tail).
 
 initState(prog(VarsIds, ArrsIds, _), N, state(Vars, Arrs, Insts)) :-
     createVars(VarsIds, Vars),
@@ -50,11 +73,9 @@ createArr(N, [0 | Tail]) :-
 check(_, _, State, _, Vis, Vis, _) :-
     member(State, Vis).
 
-check(_, Prog, State, Stack, Vis, Vis, bad(Inter, ProcsIds, StateId)) :-
+check(_, Prog, State, Stack, Vis, Vis, bad(Inter, ProcsIds)) :-
     collision(Prog, State, ProcsIds),
-    reverse(Stack, Inter),
-    length(Vis, Len),
-    StateId is Len + 1.
+    reverse(Stack, Inter).
 
 check(N, Prog, State, Stack, Vis, NewVis, Res) :-
     iterateNeighbours(N, Prog, State, Stack, Vis, NewVis, Res, 0).
@@ -105,14 +126,42 @@ step(prog(_, _, Stmts), state(Vars1, Arrs1, Insts1), ProcId,
      state(Vars2, Arrs2, Insts2)) :-
     atPosition(Insts1, ProcId, InstNo),
     atPosition(Stmts, InstNo, Stmt),
-    stepInst(Stmt, state(Vars1, Arrs1, Insts1), ProcId, InstNo, state(Vars2, Arrs2, Insts2)).
+    stepInst(Stmt, state(Vars1, Arrs1, Insts1), ProcId, InstNo,
+             state(Vars2, Arrs2, Insts2)).
 
 % stepInst(+Stmt, +StateIn, +ProcId, -StateOut)
 stepInst(assign(array(Name, Expr1), Expr2), state(Vars, Arrs1, Insts1), ProcId,
          InstNo, state(Vars, Arrs2, Insts2)) :-
-    evalExpr(Expr1, Vars1, Arrs1, ProcId, I),
-    evalExpr(Expr2, Vars1, Arrs1, ProcId, Val),
+    evalExpr(Expr1, Vars, Arrs1, ProcId, I),
+    evalExpr(Expr2, Vars, Arrs1, ProcId, Val),
     setArr(Arrs1, Name, I, Val, Arrs2),
+    InstNo1 is InstNo + 1,
+    setPosition(Insts1, ProcId, InstNo1, Insts2).
+
+stepInst(assign(Var, Expr), state(Vars1, Arrs, Insts1), ProcId, InstNo,
+         state(Vars2, Arrs, Insts2)) :-
+    evalExpr(Expr, Vars1, Arrs, ProcId, Val),
+    setVar(Vars1, Var, Val, Vars2),
+    InstNo1 is InstNo + 1,
+    setPosition(Insts1, ProcId, InstNo1, Insts2).
+
+stepInst(goto(NewInstNo), state(Vars, Arrs, Insts1), ProcId, _,
+         state(Vars, Arrs, Insts2)) :-
+    NewInstNo1 is NewInstNo - 1,
+    setPosition(Insts1, ProcId, NewInstNo1, Insts2).
+
+stepInst(condGoto(Expr, NewInstNo), state(Vars, Arrs, Insts1), ProcId, InstNo,
+         state(Vars, Arrs, Insts2)) :-
+    ( evalBool(Expr, Vars, Arrs, ProcId) ->
+        NewInstNo1 is NewInstNo - 1,
+        setPosition(Insts1, ProcId, NewInstNo1, Insts2)
+    ;
+        InstNo1 is InstNo + 1,
+        setPosition(Insts1, ProcId, InstNo1, Insts2)
+    ).
+
+stepInst(sekcja, state(Vars, Arrs, Insts1), ProcId, InstNo,
+         state(Vars, Arrs, Insts2)) :-
     InstNo1 is InstNo + 1,
     setPosition(Insts1, ProcId, InstNo1, Insts2).
 
