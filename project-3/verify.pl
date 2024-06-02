@@ -1,10 +1,18 @@
 % Dominik Wawszczak
 
+% The state is represented as state(Vars, Arrs, Insts), where:
+%  * Vars is a list of pairs (VarName, Value), representing the variable names
+%    and their corresponding values.
+%  * Arrs is a list of pairs (ArrName, Array), where ArrName is the name of the
+%    array and Array is the list of its elements.
+%  * Insts is a list of the current instruction numbers for each process,
+%    indexed by process ID.
+
 :- op(700, xfx, <>).
 
 verify(N, _) :-
     (\+ integer(N); \+ N > 0),
-    format('Error: parametr 0 powinien być liczbą > 0~n').
+    write('Error: parametr 0 powinien byc liczba > 0'), nl.
 
 verify(N, File) :-
     set_prolog_flag(fileerrors, off),
@@ -14,42 +22,43 @@ verify(N, File) :-
     read(program(Stmts)),
     ( Stmts = [] ->
         exitSafe
-    ; 
+    ;
         initState(prog(VarsIds, ArrsIds, Stmts), N, State),
         check(N, prog(VarsIds, ArrsIds, Stmts), State, [], [], _, Res),
         ( var(Res) ->
             exitSafe
         ;
-            exitInter(Res)
+            exitInterleaving(Res)
         )
     ),
     seen.
 
 verify(_, File) :-
-    format('Error: brak pliku o nazwie - ~w~n', [File]).
+    write('Error: brak pliku o nazwie - '), write(File), nl.
 
 exitSafe :-
-    format('Program jest poprawny (bezpieczny).~n').
+    write('Program jest poprawny (bezpieczny).'), nl.
 
-exitInter(bad(Inter, ProcsIds)) :-
-    format('Program jest niepoprawny.~n'),
-    format('Niepoprawny przeplot:~n'),
-    printInterleaving(Inter),
-    format('Procesy w sekcji: '),
+exitInterleaving(bad(Stack, ProcsIds)) :-
+    write('Program jest niepoprawny.'), nl,
+    write('Niepoprawny przeplot:'), nl,
+    printInterleaving(Stack),
+    write('Procesy w sekcji: '),
     printProcsIds(ProcsIds).
 
 printInterleaving([]).
 printInterleaving([(ProcId, InstNo) | Tail]) :-
+    printInterleaving(Tail),
     InstNo1 is InstNo + 1,
-    format('   Proces ~w: ~w~n', [ProcId, InstNo1]),
-    printInterleaving(Tail).
+    write('   Proces '), write(ProcId), write(': '), write(InstNo1), nl.
 
 printProcsIds([ProcId]) :-
-    format('~w.~n', [ProcId]).
+    write(ProcId), write('.'), nl.
 printProcsIds([ProcId | Tail]) :-
-    format('~w, ', [ProcId]),
+    write(ProcId), write(', '),
     printProcsIds(Tail).
 
+% initState(+Prog, +N, -State)
 initState(prog(VarsIds, ArrsIds, _), N, state(Vars, Arrs, Insts)) :-
     createVars(VarsIds, Vars),
     createArrs(ArrsIds, N, Arrs),
@@ -69,35 +78,39 @@ createArr(N, [0 | Tail]) :-
     N1 is N - 1,
     createArr(N1, Tail).
 
-% check(+NProc, +Prog, +State, +Stack, +Vis, -NewVis, -Res)
+% check(+N, +Prog, +State, +Stack, +Vis, -NewVis, -Res)
 check(_, _, State, _, Vis, Vis, _) :-
     member(State, Vis).
 
-check(_, Prog, State, Stack, Vis, Vis, bad(Inter, ProcsIds)) :-
-    collision(Prog, State, ProcsIds),
-    reverse(Stack, Inter).
+check(_, Prog, State, Stack, Vis, Vis, bad(Stack, ProcsIds)) :-
+    collision(Prog, State, ProcsIds).
 
 check(N, Prog, State, Stack, Vis, NewVis, Res) :-
     iterateNeighbours(N, Prog, State, Stack, [State | Vis], NewVis, Res, 0).
 
 % iterateNeighbours(N, Prog, State, Stack, Vis, NewVis, Res, ProcId)
 iterateNeighbours(N, _, _, _, Vis, Vis, _, N).
-iterateNeighbours(N, Prog, state(Vars, Arrs, Insts), Stack, Vis, NewVis, Res, ProcId) :-
+iterateNeighbours(N, Prog, state(Vars, Arrs, Insts), Stack, Vis, NewVis, Res,
+                  ProcId) :-
     step(Prog, state(Vars, Arrs, Insts), ProcId, NewState),
     atPosition(Insts, ProcId, InstNo),
     check(N, Prog, NewState, [(ProcId, InstNo) | Stack], Vis, Vis2, Res),
     ProcId1 is ProcId + 1,
     ( var(Res) ->
-        iterateNeighbours(N, Prog, state(Vars, Arrs, Insts), Stack, Vis2, NewVis, Res, ProcId1)
+        iterateNeighbours(N, Prog, state(Vars, Arrs, Insts), Stack, Vis2,
+                          NewVis, Res, ProcId1)
     ;
         true
     ).
 
+% collision(+Prog, +State, -ProcsIds)
 collision(prog(_, _, Stmts), state(_, _, Insts), ProcsIds) :-
     procsInSection(Stmts, Insts, 0, ProcsIds),
     length(ProcsIds, Len),
     Len > 1.
 
+% procsInSection(+Stmts, +Insts, +ProcId, -Res)
+% Res is a list of processes in section.
 procsInSection(_, [], _, []).
 procsInSection(Stmts, [Inst | Insts], ProcId, Res) :-
     ( atPosition(Stmts, Inst, sekcja) ->
@@ -169,7 +182,7 @@ stepInst(sekcja, state(Vars, Arrs, Insts1), ProcId, InstNo,
 % evalExpr(+Expr, +Vars, +Arrs, +ProcId, -Val)
 evalExpr(pid, _, _, ProcId, ProcId).
 
-evalExpr(N, _, _, _, N) :- number(N).
+evalExpr(N, _, _, _, N) :- integer(N).
 
 evalExpr(array(Name, Expr), Vars, Arrs, ProcId, Val) :-
     member((Name, Arr), Arrs),
@@ -197,7 +210,7 @@ evalExpr(E1 * E2, Vars, Arrs, ProcId, Val) :-
 evalExpr(E1 / E2, Vars, Arrs, ProcId, Val) :-
     evalExpr(E1, Vars, Arrs, ProcId, Val1),
     evalExpr(E2, Vars, Arrs, ProcId, Val2),
-    Val is Val1 / Val2.
+    Val is Val1 // Val2.
 
 % evalBool(+Expr, +Vars, +Arrs, +ProcId)
 evalBool(E1 < E2, Vars, Arrs, ProcId) :-
