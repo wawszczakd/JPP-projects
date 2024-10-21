@@ -8,7 +8,7 @@ module Interpreter where
     import Control.Monad.State
     import System.Exit
     import Data.Map as Map
-
+    
     interpretFile :: FilePath -> IO ()
     interpretFile file = readFile file >>= interpret
     
@@ -18,10 +18,10 @@ module Interpreter where
     
     interpret :: String -> IO ()
     interpret input = run $ pProgram $ myLexer input
-
+    
     run :: Either String Program -> IO ()
     run (Left err) = do
-        print err
+        putStrLn err
         exitFailure
     run (Right tree) = do
         res <- runExceptT $ runReaderT (checkProgram tree) (Map.empty, False)

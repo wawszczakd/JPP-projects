@@ -12,7 +12,7 @@ module Main where
                     [ "usage: Call with one of the following argument combinations:"
                     , "  --help          Display this help message."
                     , "  (no arguments)  Parse standard input."
-                    , "  (file)         Parse content of the file." ]
+                    , "  <file>          Parse content of the file." ]
                 exitFailure
             [f]        -> interpretFile f
             []         -> interpretStdin

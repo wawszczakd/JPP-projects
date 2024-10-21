@@ -10,8 +10,8 @@ executable lager-lang
     
     other-modules:
         AbsLagerLang,
-        ParLagerLang,
         LexLagerLang,
+        ParLagerLang,
         Common,
         TypeChecker,
         Evaluator,
