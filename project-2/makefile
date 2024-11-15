@@ -6,6 +6,6 @@ interpreter: $(wildcard src/**/*.hs)
 
 clean:
 	cabal clean
-	rm interpreter
+	rm -f interpreter
 
 .PHONY: all clean
